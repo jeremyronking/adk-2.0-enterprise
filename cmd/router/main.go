@@ -55,35 +55,39 @@ func main() {
 		log.Fatalf("failed to create chat agent: %v", err)
 	}
 
-	sessService := session.InMemoryService()
-	memService := memory.InMemoryService()
-
 	config := &launcher.Config{
 		AgentLoader:    agent.NewSingleLoader(rootAgent),
-		SessionService: sessService,
-		MemoryService:  memService,
+		SessionService: session.InMemoryService(),
+		MemoryService:  memory.InMemoryService(),
 		TelemetryOptions: []telemetry.Option{
 			telemetry.WithOtelToCloud(true),
 		},
 	}
 
 	args := os.Args[1:]
-	if len(args) == 0 {
-		args = []string{"web", "-port", "8080", "-api_server_address", "/api", "api", "webui"}
-	} else if len(args) >= 1 && args[0] == "web" {
-		hasAPIAddr := false
-		for i, arg := range args {
-			if arg == "-api_server_address" || strings.HasPrefix(arg, "-api_server_address=") {
-				hasAPIAddr = true
-				break
-			}
-			if i > 0 && args[i-1] == "-api_server_address" {
-				hasAPIAddr = true
+	if len(args) > 0 && args[0] == "web" {
+		hasAPIServerAddr := false
+		for _, arg := range args {
+			if strings.HasPrefix(arg, "-api_server_address") {
+				hasAPIServerAddr = true
 				break
 			}
 		}
-		if !hasAPIAddr {
-			args = append([]string{"web", "-api_server_address", "/api"}, args[1:]...)
+		if !hasAPIServerAddr {
+			apiAddr := os.Getenv("API_SERVER_ADDRESS")
+			if apiAddr == "" {
+				apiAddr = "/api"
+			}
+			for i, arg := range args {
+				if arg == "webui" {
+					newArgs := make([]string, 0, len(args)+2)
+					newArgs = append(newArgs, args[:i+1]...)
+					newArgs = append(newArgs, "-api_server_address", apiAddr)
+					newArgs = append(newArgs, args[i+1:]...)
+					args = newArgs
+					break
+				}
+			}
 		}
 	}
 
