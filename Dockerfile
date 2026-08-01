@@ -23,4 +23,4 @@ COPY --from=builder /app/bin/service /app/service
 ENV PORT=8080
 EXPOSE 8080
 
-ENTRYPOINT ["/app/service", "web", "-port", "8080", "api", "webui"]
+ENTRYPOINT ["/app/service"]

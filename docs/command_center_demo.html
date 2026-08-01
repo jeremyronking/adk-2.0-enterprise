@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Enterprise Agent Platform - Multi-Agent Command Center</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#0a0b14',
+              surface: '#12131c',
+              card: '#1a1b26',
+              border: '#28293d',
+              cyan: '#00f0ff',
+              cyanGlow: 'rgba(0, 240, 255, 0.25)',
+              amber: '#ffba20',
+              emerald: '#00fa64',
+              rose: '#ff4757',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Space Grotesk', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background: radial-gradient(circle at 50% 0%, #161726 0%, #0a0b14 100%);
+      background-attachment: fixed;
+    }
+    .glass-panel {
+      background: rgba(22, 23, 38, 0.65);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    .glow-cyan {
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
+    }
+    .glow-amber {
+      box-shadow: 0 0 20px rgba(255, 186, 32, 0.35);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 20px rgba(0, 250, 100, 0.35);
+    }
+    .card-selected {
+      ring: 2px;
+      border-color: #00f0ff !important;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.4) !important;
+    }
+    .pulse-animation {
+      animation: pulse-ring 2s infinite ease-in-out;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(0.98); opacity: 0.9; }
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(10, 11, 20, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.4); }
+  </style>
+</head>
+<body class="text-gray-200 min-h-screen flex flex-col font-sans antialiased overflow-x-hidden selection:bg-brand-cyan selection:text-black">
+
+  <!-- TOP NAVIGATION HEADER -->
+  <header class="glass-panel border-b border-white/10 sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-brand-cyan/10 border border-brand-cyan/40 flex items-center justify-center text-brand-cyan">
+        <span class="material-symbols-outlined">hub</span>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-display font-bold text-lg text-white tracking-wide">Enterprise Agent Platform</h1>
+          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">v2.0 Orchestrator</span>
+        </div>
+        <p class="text-xs text-gray-400 font-mono">Multi-Agent Construction Pipeline (Per-Phase State & Inspection)</p>
+      </div>
+    </div>
+
+    <!-- Microservice Health Badges -->
+    <div class="hidden lg:flex items-center gap-3 bg-brand-navy/60 px-4 py-2 rounded-xl border border-white/5">
+      <span class="text-xs text-gray-400 font-mono">Services:</span>
+      <div class="flex items-center gap-2 text-xs font-mono">
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> router
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> construction
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> weather
+        </span>
+        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> time
+        </span>
+      </div>
+    </div>
+
+    <!-- Right User / Session Info -->
+    <div class="flex items-center gap-4">
+      <div class="text-right hidden sm:block">
+        <div class="text-xs font-mono text-gray-300">Session: <span id="session-id" class="text-brand-cyan">sess-8f391a</span></div>
+        <div class="text-[11px] font-mono text-gray-400">Trace: <span class="text-emerald-400">otel-cloud-run</span></div>
+      </div>
+      <button onclick="toggleHelpModal()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition">
+        <span class="material-symbols-outlined text-sm">help_outline</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTROLS & PIPELINE TOOLBAR -->
+  <section class="px-6 py-4 border-b border-white/5 bg-brand-surface/40">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Target Configuration -->
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
+          <span class="text-gray-400 font-mono">Structure:</span>
+          <select id="structure-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+            <option value="Luxury Villa" class="bg-brand-card text-white">Luxury Villa</option>
+            <option value="Modern Mansion" class="bg-brand-card text-white">Modern Mansion</option>
+            <option value="Storage Facility" class="bg-brand-card text-white">Storage Facility</option>
+            <option value="Commercial Tower" class="bg-brand-card text-white">Commercial Tower</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
+          <span class="text-gray-400 font-mono">Inspector Mode:</span>
+          <select id="inspector-mode-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+            <option value="repair_demo" class="bg-brand-card text-white">⚡ Defect & Repair Demo (Framing Stage)</option>
+            <option value="random" class="bg-brand-card text-white">🎲 Random (25% Defect Chance)</option>
+            <option value="always_pass" class="bg-brand-card text-white">✅ Always Pass</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Execution Controls -->
+      <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+        <button id="btn-start" onclick="runPipeline()" class="px-5 py-2.5 rounded-lg bg-brand-cyan hover:bg-brand-cyan/90 text-black font-semibold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition">
+          <span class="material-symbols-outlined text-sm">play_arrow</span> Start Orchestration
+        </button>
+        <button id="btn-reset" onclick="resetPipeline()" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-mono text-xs flex items-center gap-1.5 border border-white/10 transition">
+          <span class="material-symbols-outlined text-sm">restart_alt</span> Reset
+        </button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- MAIN DASHBOARD CONTENT (GRID: STAGE PIPELINE & INSPECTOR DRAWER) -->
+  <main class="flex-1 px-6 py-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT / MAIN: WORKFLOW PIPELINE CANVAS (8 COLS) -->
+    <div class="lg:col-span-8 flex flex-col gap-6">
+      
+      <!-- Stage Overview Header -->
+      <div class="glass-panel p-5 rounded-2xl flex items-center justify-between">
+        <div>
+          <h2 class="font-display font-bold text-base text-white flex items-center gap-2">
+            <span class="material-symbols-outlined text-brand-cyan">account_tree</span>
+            Construction Multi-Agent Workflow
+          </h2>
+          <p class="text-xs text-gray-400 font-mono mt-0.5">Click any stage card to inspect its persisted thought stream and inspection history</p>
+        </div>
+        <div id="overall-status" class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-400">
+          Status: IDLE
+        </div>
+      </div>
+
+      <!-- HORIZONTAL INTERACTIVE STAGE CARDS -->
+      <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4 overflow-x-auto">
+        
+        <!-- Stage Stepper Cards Grid -->
+        <div class="grid grid-cols-5 gap-3 relative">
+          
+          <!-- STAGE 1: FOUNDATION -->
+          <div id="card-stage-0" onclick="selectStage(0)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">01</span>
+                <span id="badge-stage-0" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+              </div>
+              <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-gray-400">foundation</span> Foundation
+              </h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-1">foundation_agent</p>
+            </div>
+            
+            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+              <span>Attempt: <b id="attempt-stage-0" class="text-white">0</b></span>
+              <span id="time-stage-0">--</span>
+            </div>
+          </div>
+
+          <!-- STAGE 2: FRAMING -->
+          <div id="card-stage-1" onclick="selectStage(1)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">02</span>
+                <span id="badge-stage-1" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+              </div>
+              <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-gray-400">crop_square</span> Framing
+              </h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-1">framing_agent</p>
+            </div>
+            
+            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+              <span>Attempt: <b id="attempt-stage-1" class="text-white">0</b></span>
+              <span id="time-stage-1">--</span>
+            </div>
+          </div>
+
+          <!-- STAGE 3: ROOFING -->
+          <div id="card-stage-2" onclick="selectStage(2)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">03</span>
+                <span id="badge-stage-2" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+              </div>
+              <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-gray-400">roofing</span> Roofing
+              </h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-1">roofing_agent</p>
+            </div>
+            
+            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+              <span>Attempt: <b id="attempt-stage-2" class="text-white">0</b></span>
+              <span id="time-stage-2">--</span>
+            </div>
+          </div>
+
+          <!-- STAGE 4: EXTERIOR -->
+          <div id="card-stage-3" onclick="selectStage(3)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">04</span>
+                <span id="badge-stage-3" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+              </div>
+              <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-gray-400">house</span> Exterior
+              </h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-1">exterior_agent</p>
+            </div>
+            
+            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+              <span>Attempt: <b id="attempt-stage-3" class="text-white">0</b></span>
+              <span id="time-stage-3">--</span>
+            </div>
+          </div>
+
+          <!-- STAGE 5: INTERIOR -->
+          <div id="card-stage-4" onclick="selectStage(4)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">05</span>
+                <span id="badge-stage-4" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+              </div>
+              <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm text-gray-400">chair</span> Interior
+              </h3>
+              <p class="text-[10px] text-gray-400 font-mono mt-1">interior_agent</p>
+            </div>
+            
+            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+              <span>Attempt: <b id="attempt-stage-4" class="text-white">0</b></span>
+              <span id="time-stage-4">--</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Connection Progress Bar -->
+        <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-2">
+          <div id="pipeline-progress" class="h-full bg-gradient-to-r from-brand-cyan via-brand-amber to-brand-emerald w-0 transition-all duration-500"></div>
+        </div>
+
+      </div>
+
+      <!-- PERSISTED SUB-AGENT THOUGHT STREAM BOX (WITH STAGE PERSISTENCE) -->
+      <div class="glass-panel p-5 rounded-2xl border border-white/10 flex flex-col gap-3">
+        <div class="flex items-center justify-between border-b border-white/10 pb-2.5">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-sm text-brand-cyan">psychology</span>
+            <h3 class="font-display font-semibold text-xs text-white">
+              Persisted Thought Stream: <span id="selected-phase-title" class="text-brand-cyan font-bold">Foundation</span>
+            </h3>
+          </div>
+          
+          <div class="flex items-center gap-2">
+            <span id="active-agent-tag" class="px-2 py-0.5 rounded bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[10px] font-mono">
+              foundation_agent
+            </span>
+            <span id="thought-count-badge" class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 text-[10px] font-mono">
+              0 entries
+            </span>
+          </div>
+        </div>
+
+        <!-- Persisted Thoughts Scroll Container -->
+        <div id="thought-stream-container" class="bg-brand-navy/80 p-4 rounded-xl border border-white/5 font-mono text-xs max-h-48 overflow-y-auto space-y-2">
+          <div class="text-gray-500 italic text-[11px]">[stage 01 - foundation]: Click "Start Orchestration" or select another phase card to view its persisted thoughts.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: INSPECTOR AUDIT DRAWER (4 COLS - REACTIVE TO SELECTED STAGE) -->
+    <div class="lg:col-span-4 flex flex-col gap-6">
+      
+      <div class="glass-panel p-5 rounded-2xl flex flex-col gap-4 border border-white/10">
+        
+        <!-- Drawer Header -->
+        <div class="flex items-center justify-between border-b border-white/10 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-brand-amber">verified_user</span>
+            <h2 class="font-display font-semibold text-sm text-white">Inspector Agent Audit</h2>
+          </div>
+          <span id="inspector-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-gray-400 border border-white/10">
+            IDLE
+          </span>
+        </div>
+
+        <!-- Selected Phase Info -->
+        <div class="flex items-center justify-between text-xs font-mono text-gray-400 bg-brand-navy/60 p-2.5 rounded-lg border border-white/5">
+          <span>Viewing Phase:</span>
+          <span id="inspector-phase-target" class="text-brand-cyan font-bold">01 - foundation</span>
+        </div>
+
+        <!-- Findings Card -->
+        <div class="bg-brand-navy/80 p-4 rounded-xl border border-white/5 flex flex-col gap-2">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-gray-400 font-mono text-[11px]">Inspection Result:</span>
+            <span id="inspector-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Awaiting Run</span>
+          </div>
+          <p id="inspector-findings-text" class="text-xs font-mono text-gray-300 leading-normal italic">
+            "No inspection performed yet for this phase."
+          </p>
+        </div>
+
+        <!-- Repair Dispatch Panel -->
+        <div id="repair-panel" class="bg-brand-navy/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2 transition-all duration-300">
+          <div class="flex items-center gap-2 text-gray-400 font-semibold text-xs">
+            <span class="material-symbols-outlined text-sm">build</span>
+            Auto-Repair Dispatch Log
+          </div>
+          <div class="text-[11px] font-mono text-gray-300 space-y-1">
+            <div>Target Agent: <span id="repair-agent-name" class="text-white">foundation_agent</span></div>
+            <div>Action Payload: <span id="repair-action-payload" class="text-gray-400">none</span></div>
+            <div>Attempts / Retries: <span id="repair-count" class="text-white font-bold">0</span></div>
+          </div>
+        </div>
+
+        <!-- Telemetry Trace Details -->
+        <div class="space-y-1.5 text-[11px] font-mono text-gray-400 border-t border-white/5 pt-3">
+          <div class="flex justify-between">
+            <span>Probability Gate:</span>
+            <span class="text-gray-200">75% PASS / 25% FIX</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Inspector Function:</span>
+            <span class="text-brand-cyan">inspectPhase()</span>
+          </div>
+          <div class="flex justify-between">
+            <span>Trace ID:</span>
+            <span id="telemetry-span-id" class="text-emerald-400">span-0941a87e</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- BOTTOM FULL WIDTH: A2A PROTOCOL TELEMETRY LOG CONSOLE (12 COLS) -->
+    <div class="lg:col-span-12 glass-panel p-5 rounded-2xl flex flex-col gap-3 border border-white/10 mt-2">
+      
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-brand-cyan text-sm">terminal</span>
+          <h3 class="font-display font-semibold text-xs text-white">Live A2A Protocol & Telemetry Log Stream</h3>
+        </div>
+        
+        <div class="flex items-center gap-2 text-xs font-mono">
+          <span class="text-gray-400">Filter:</span>
+          <button onclick="filterLogs('all')" class="px-2 py-0.5 rounded bg-white/10 text-white hover:bg-white/20 text-[10px]">All</button>
+          <button onclick="filterLogs('selected')" class="px-2 py-0.5 rounded bg-brand-cyan/20 text-brand-cyan hover:bg-brand-cyan/30 text-[10px]">Selected Stage Only</button>
+          <button onclick="filterLogs('inspector')" class="px-2 py-0.5 rounded bg-brand-amber/20 text-brand-amber hover:bg-brand-amber/30 text-[10px]">Inspector</button>
+          <button onclick="filterLogs('trades')" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[10px]">Trades</button>
+          <button onclick="clearLogs()" class="px-2 py-0.5 rounded bg-white/5 text-gray-400 hover:bg-white/10 text-[10px]">Clear</button>
+        </div>
+      </div>
+
+      <!-- Log Terminal Container -->
+      <div id="log-container" class="bg-brand-navy/95 p-4 rounded-xl font-mono text-xs h-48 overflow-y-auto space-y-1.5 border border-white/5">
+        <div class="text-gray-500 italic">[system]: A2A telemetry logger ready. Select any phase card above to filter thoughts and logs.</div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- HELP MODAL -->
+  <div id="help-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="glass-panel p-6 rounded-2xl max-w-lg w-full border border-white/10 space-y-4">
+      <div class="flex items-center justify-between border-b border-white/10 pb-3">
+        <h3 class="font-display font-bold text-white text-base">Enterprise Platform Visualizer</h3>
+        <button onclick="toggleHelpModal()" class="text-gray-400 hover:text-white">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div class="text-xs text-gray-300 space-y-2 font-mono">
+        <p>This UI demonstrates how enterprise orchestrators manage multi-agent workflows with inspector quality gates.</p>
+        <ul class="list-disc pl-4 space-y-1 text-gray-400">
+          <li><b>Clickable Stages:</b> Click any phase card at any time to view its persisted thoughts & inspector audit history.</li>
+          <li><b>5 Phases:</b> Foundation ➔ Framing ➔ Roofing ➔ Exterior ➔ Interior.</li>
+          <li><b>Inspector Gate:</b> Runs after each sub-agent completes work.</li>
+          <li><b>Repair Loop:</b> If inspector flags <i>FIX REQUIRED</i>, the orchestrator dispatches `action: repair` back to the sub-agent before re-inspecting.</li>
+        </ul>
+      </div>
+      <button onclick="toggleHelpModal()" class="w-full py-2 bg-brand-cyan text-black font-semibold rounded-lg text-xs">
+        Close & Continue
+      </button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT SIMULATION & STATE PERSISTENCE ENGINE -->
+  <script>
+    // DEFINE 5 PIPELINE STAGES WITH INDEPENDENT PERSISTED STATE
+    const stageDefinitions = [
+      { name: 'foundation', agent: 'foundation_agent', icon: 'foundation', title: 'Foundation' },
+      { name: 'framing', agent: 'framing_agent', icon: 'crop_square', title: 'Framing' },
+      { name: 'roofing', agent: 'roofing_agent', icon: 'roofing', title: 'Roofing' },
+      { name: 'exterior', agent: 'exterior_agent', icon: 'house', title: 'Exterior' },
+      { name: 'interior', agent: 'interior_agent', icon: 'chair', title: 'Interior' }
+    ];
+
+    // GLOBAL PER-STAGE PERSISTED STATE
+    let stageState = [];
+    let selectedStageIndex = 0;
+    let isRunning = false;
+    let activeLogFilter = 'all';
+
+    function initStageState() {
+      stageState = stageDefinitions.map((def, idx) => ({
+        index: idx,
+        name: def.name,
+        agent: def.agent,
+        title: def.title,
+        status: 'QUEUED',
+        attempts: 0,
+        timeStr: '--',
+        thoughts: [],
+        inspectorBadge: 'IDLE',
+        inspectorBadgeClass: 'px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-gray-400 border border-white/10',
+        inspectorStatusPill: 'Awaiting Run',
+        inspectorStatusPillClass: 'text-[10px] font-mono px-2 py-0.5 rounded bg-gray-500/20 text-gray-400',
+        inspectorFindings: 'No inspection performed yet for this phase.',
+        repairPayload: 'none',
+        repairAttempts: 0,
+        spanId: `span-0941a87e-${idx}`
+      }));
+    }
+
+    initStageState();
+
+    function formatTime() {
+      const d = new Date();
+      return d.toTimeString().split(' ')[0] + '.' + String(d.getMilliseconds()).padStart(3, '0');
+    }
+
+    function addLog(msg, type = 'info', stageIdx = null) {
+      const container = document.getElementById('log-container');
+      const time = formatTime();
+      let colorClass = 'text-gray-300';
+      if (type === 'router') colorClass = 'text-brand-cyan';
+      if (type === 'trade') colorClass = 'text-emerald-400';
+      if (type === 'inspector') colorClass = 'text-brand-amber';
+      if (type === 'fix') colorClass = 'text-brand-rose font-bold';
+
+      const entry = document.createElement('div');
+      entry.className = `log-item ${colorClass}`;
+      entry.dataset.type = type;
+      if (stageIdx !== null) entry.dataset.stage = stageIdx;
+      entry.innerHTML = `<span class="text-gray-500">[${time}]</span> ${msg}`;
+      container.appendChild(entry);
+      container.scrollTop = container.scrollHeight;
+
+      if (activeLogFilter === 'selected') {
+        filterLogs('selected');
+      }
+    }
+
+    function addThought(stageIdx, thoughtMsg, category = 'thought') {
+      const timestamp = formatTime();
+      stageState[stageIdx].thoughts.push({ timestamp, message: thoughtMsg, category });
+
+      // If the currently selected stage is updated, re-render its thought stream immediately
+      if (selectedStageIndex === stageIdx) {
+        renderThoughtStream(stageIdx);
+      }
+    }
+
+    function renderThoughtStream(stageIdx) {
+      const container = document.getElementById('thought-stream-container');
+      const thoughts = stageState[stageIdx].thoughts;
+      document.getElementById('thought-count-badge').innerText = `${thoughts.length} entries`;
+
+      if (thoughts.length === 0) {
+        container.innerHTML = `<div class="text-gray-500 italic text-[11px]">[${stageState[stageIdx].name}]: Awaiting agent execution. No thoughts recorded yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = thoughts.map(t => {
+        let badgeColor = 'text-brand-cyan';
+        if (t.category === 'repair') badgeColor = 'text-brand-amber';
+        if (t.category === 'inspection') badgeColor = 'text-brand-emerald';
+        if (t.category === 'fix') badgeColor = 'text-brand-rose font-bold';
+
+        return `<div class="p-2 rounded bg-brand-card/60 border border-white/5 ${badgeColor}">
+          <div class="text-[10px] text-gray-500 font-mono flex justify-between">
+            <span>[${t.timestamp}]</span>
+            <span class="uppercase tracking-wider text-[9px]">${t.category}</span>
+          </div>
+          <div class="mt-1 text-xs font-mono leading-relaxed text-gray-200">${t.message}</div>
+        </div>`;
+      }).join('');
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function renderInspectorDrawer(stageIdx) {
+      const s = stageState[stageIdx];
+      document.getElementById('inspector-badge').innerText = s.inspectorBadge;
+      document.getElementById('inspector-badge').className = s.inspectorBadgeClass;
+      document.getElementById('inspector-phase-target').innerText = `0${stageIdx + 1} - ${s.name}`;
+      document.getElementById('inspector-status-pill').innerText = s.inspectorStatusPill;
+      document.getElementById('inspector-status-pill').className = s.inspectorStatusPillClass;
+      document.getElementById('inspector-findings-text').innerText = `"${s.inspectorFindings}"`;
+
+      document.getElementById('repair-agent-name').innerText = s.agent;
+      document.getElementById('repair-action-payload').innerText = s.repairPayload;
+      document.getElementById('repair-count').innerText = s.repairAttempts;
+      document.getElementById('telemetry-span-id').innerText = s.spanId;
+
+      const repairPanel = document.getElementById('repair-panel');
+      if (s.repairAttempts > 0) {
+        repairPanel.className = 'bg-brand-amber/15 border border-brand-amber/40 p-4 rounded-xl flex flex-col gap-2 transition-all duration-300 shadow-[0_0_15px_rgba(255,186,32,0.2)]';
+      } else {
+        repairPanel.className = 'bg-brand-navy/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2 transition-all duration-300';
+      }
+    }
+
+    function selectStage(stageIdx) {
+      selectedStageIndex = stageIdx;
+
+      // Update card highlighting
+      for (let i = 0; i < 5; i++) {
+        const card = document.getElementById(`card-stage-${i}`);
+        if (i === stageIdx) {
+          card.classList.add('card-selected');
+        } else {
+          card.classList.remove('card-selected');
+        }
+      }
+
+      // Update Thought Stream & Inspector Drawer for this selected stage
+      const s = stageState[stageIdx];
+      document.getElementById('selected-phase-title').innerText = `${s.title} (Phase 0${stageIdx + 1})`;
+      document.getElementById('active-agent-tag').innerText = s.agent;
+
+      renderThoughtStream(stageIdx);
+      renderInspectorDrawer(stageIdx);
+
+      if (activeLogFilter === 'selected') {
+        filterLogs('selected');
+      }
+    }
+
+    function filterLogs(filterType) {
+      activeLogFilter = filterType;
+      const items = document.querySelectorAll('.log-item');
+      items.forEach(item => {
+        if (filterType === 'all') {
+          item.style.display = 'block';
+        } else if (filterType === 'selected') {
+          if (item.dataset.stage == selectedStageIndex || item.dataset.type === 'router') {
+            item.style.display = 'block';
+          } else {
+            item.style.display = 'none';
+          }
+        } else if (filterType === 'inspector' && item.dataset.type === 'inspector') {
+          item.style.display = 'block';
+        } else if (filterType === 'trades' && item.dataset.type === 'trade') {
+          item.style.display = 'block';
+        } else {
+          item.style.display = 'none';
+        }
+      });
+    }
+
+    function clearLogs() {
+      document.getElementById('log-container').innerHTML = '<div class="text-gray-500 italic">[system]: Logs cleared.</div>';
+    }
+
+    function updateStageCardUI(index, status, attempt = 1, timeStr = '--') {
+      stageState[index].status = status;
+      stageState[index].attempts = attempt;
+      if (timeStr !== '--') stageState[index].timeStr = timeStr;
+
+      const card = document.getElementById(`card-stage-${index}`);
+      const badge = document.getElementById(`badge-stage-${index}`);
+      const attemptEl = document.getElementById(`attempt-stage-${index}`);
+      const timeEl = document.getElementById(`time-stage-${index}`);
+
+      attemptEl.innerText = attempt;
+      if (timeStr !== '--') timeEl.innerText = timeStr;
+
+      card.classList.remove('border-brand-cyan', 'border-brand-amber', 'border-brand-emerald', 'glow-cyan', 'glow-amber', 'glow-emerald');
+
+      if (status === 'RUNNING') {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/40 animate-pulse';
+        badge.innerText = 'RUNNING';
+        card.classList.add('border-brand-cyan', 'glow-cyan');
+      } else if (status === 'INSPECTING') {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-brand-amber/20 text-brand-amber border border-brand-amber/40 animate-pulse';
+        badge.innerText = 'INSPECTING';
+        card.classList.add('border-brand-amber', 'glow-amber');
+      } else if (status === 'FIX') {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-brand-rose/20 text-brand-rose border border-brand-rose/40 animate-bounce';
+        badge.innerText = 'FIX REQ';
+        card.classList.add('border-brand-amber', 'glow-amber');
+      } else if (status === 'REPAIRING') {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-brand-amber/20 text-brand-amber border border-brand-amber/40 animate-pulse';
+        badge.innerText = 'REPAIRING';
+        card.classList.add('border-brand-amber', 'glow-amber');
+      } else if (status === 'PASSED') {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-brand-emerald/20 text-brand-emerald border border-brand-emerald/40';
+        badge.innerText = 'PASSED';
+        card.classList.add('border-brand-emerald', 'glow-emerald');
+      } else {
+        badge.className = 'px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10';
+        badge.innerText = 'QUEUED';
+      }
+    }
+
+    async function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function runPipeline() {
+      if (isRunning) return;
+      isRunning = true;
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-start').classList.add('opacity-50');
+
+      const structure = document.getElementById('structure-select').value;
+      const mode = document.getElementById('inspector-mode-select').value;
+
+      document.getElementById('overall-status').innerText = 'Status: EXECUTING';
+      document.getElementById('overall-status').className = 'px-3 py-1 rounded-full bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/40 text-xs font-mono animate-pulse';
+
+      addLog(`[router]: Initialized construction orchestration for target structure: "${structure}".`, 'router');
+      addLog(`[construction_agent]: Executing 5-phase sequential pipeline across trade sub-agents...`, 'router');
+
+      for (let i = 0; i < stageDefinitions.length; i++) {
+        // Automatically switch view to the active stage card
+        selectStage(i);
+
+        const def = stageDefinitions[i];
+        const s = stageState[i];
+
+        // Update progress bar
+        const progressPct = ((i + 1) / stageDefinitions.length) * 100;
+        document.getElementById('pipeline-progress').style.width = `${progressPct}%`;
+
+        // Step A: Sub-agent construct
+        updateStageCardUI(i, 'RUNNING', 1);
+        addThought(i, `🏗️ [${def.agent}]: Initiating ${def.name} construction for structure "${structure}"...`, 'thought');
+        addLog(`[${def.agent}]: Starting ${def.name} construction on ${structure}...`, 'trade', i);
+
+        await sleep(1400);
+
+        addThought(i, `✅ [${def.agent}]: Completed ${def.name} structural assembly. Requesting inspector_agent audit.`, 'thought');
+        addLog(`[${def.agent}]: Finished ${def.name} construction on ${structure}. Requesting inspection.`, 'trade', i);
+
+        // Step B: Inspector inspection
+        updateStageCardUI(i, 'INSPECTING', 1);
+        s.inspectorBadge = 'EVALUATING';
+        s.inspectorBadgeClass = 'px-2 py-0.5 rounded text-[10px] font-mono bg-brand-amber/20 text-brand-amber border border-brand-amber/40 animate-pulse';
+        s.inspectorStatusPill = 'Evaluating Phase...';
+        s.inspectorStatusPillClass = 'text-[10px] font-mono px-2 py-0.5 rounded bg-brand-amber/20 text-brand-amber';
+        renderInspectorDrawer(i);
+
+        addThought(i, `🔍 [inspector_agent]: Running building code compliance check on ${def.name} phase...`, 'inspection');
+        addLog(`[inspector_agent]: Calling inspect_phase(phase="${def.name}")...`, 'inspector', i);
+        await sleep(1200);
+
+        // Determine Pass vs Fix
+        let needFix = false;
+        if (mode === 'repair_demo' && def.name === 'framing') {
+          needFix = true;
+        } else if (mode === 'random') {
+          needFix = Math.random() < 0.25;
+        }
+
+        if (needFix) {
+          // FIX REQUIRED BRANCH
+          updateStageCardUI(i, 'FIX', 1);
+          s.inspectorBadge = 'FIX REQUIRED';
+          s.inspectorBadgeClass = 'px-2 py-0.5 rounded text-[10px] font-mono bg-brand-rose/20 text-brand-rose border border-brand-rose/40';
+          s.inspectorStatusPill = 'FAIL (FIX REQUIRED)';
+          s.inspectorStatusPillClass = 'text-[10px] font-mono px-2 py-0.5 rounded bg-brand-rose/20 text-brand-rose font-bold';
+          s.inspectorFindings = `📋 [inspector_agent]: Phase "${def.name}" FAILED inspection. Alignment defect detected on main structural header beam. Repairs required.`;
+          s.repairPayload = `action: "repair", phase: "${def.name}"`;
+          s.repairAttempts = 1;
+
+          renderInspectorDrawer(i);
+          addThought(i, `⚠️ [inspector_agent]: Defect detected in ${def.name}. Refusing phase approval. Auto-dispatching repair call to ${def.agent}.`, 'fix');
+          addLog(`[inspector_agent]: ⚠️ Phase "${def.name}" FAILED inspection. Defect detected. Dispatching repair request.`, 'fix', i);
+
+          await sleep(1500);
+
+          // Execute Repair
+          updateStageCardUI(i, 'REPAIRING', 2);
+          addThought(i, `🛠️ [${def.agent}]: Executing repair override with payload { action: "repair" }... Re-aligning structural headers.`, 'repair');
+          addLog(`[${def.agent}]: Executing repair on ${def.name} for ${structure}... Repairs complete.`, 'trade', i);
+
+          await sleep(1500);
+
+          // Re-inspection PASS
+          s.inspectorStatusPill = 'RE-INSPECTING PASS';
+          s.inspectorStatusPillClass = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400';
+          s.inspectorFindings = `📋 [inspector_agent]: Re-inspection of "${def.name}" APPROVED. Structural repairs verified.`;
+          renderInspectorDrawer(i);
+
+          addThought(i, `✅ [inspector_agent]: Re-inspection passed for ${def.name}. All defects resolved.`, 'inspection');
+          addLog(`[inspector_agent]: Phase "${def.name}" RE-INSPECTED & APPROVED after repairs.`, 'inspector', i);
+          updateStageCardUI(i, 'PASSED', 2, '2.8s');
+        } else {
+          // PASS BRANCH
+          s.inspectorBadge = 'APPROVED';
+          s.inspectorBadgeClass = 'px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+          s.inspectorStatusPill = 'PASS (APPROVED)';
+          s.inspectorStatusPillClass = 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400';
+          s.inspectorFindings = `📋 [inspector_agent]: Phase "${def.name}" APPROVED. Work meets enterprise building standards.`;
+          renderInspectorDrawer(i);
+
+          addThought(i, `✅ [inspector_agent]: Phase ${def.name} approved on first inspection pass.`, 'inspection');
+          addLog(`[inspector_agent]: Phase "${def.name}" APPROVED on first pass.`, 'inspector', i);
+          updateStageCardUI(i, 'PASSED', 1, '1.4s');
+        }
+
+        await sleep(800);
+      }
+
+      // Pipeline Complete
+      document.getElementById('overall-status').innerText = 'Status: COMPLETED';
+      document.getElementById('overall-status').className = 'px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-mono';
+      addLog(`[construction_agent]: 🎉 Construction complete for ${structure}. All 5 phases passed inspection.`, 'router');
+
+      isRunning = false;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-start').classList.remove('opacity-50');
+    }
+
+    function resetPipeline() {
+      isRunning = false;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-start').classList.remove('opacity-50');
+
+      document.getElementById('overall-status').innerText = 'Status: IDLE';
+      document.getElementById('overall-status').className = 'px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-400';
+
+      document.getElementById('pipeline-progress').style.width = '0%';
+      initStageState();
+
+      for (let i = 0; i < stageDefinitions.length; i++) {
+        updateStageCardUI(i, 'QUEUED', 0, '--');
+      }
+
+      selectStage(0);
+      clearLogs();
+    }
+
+    function toggleHelpModal() {
+      const modal = document.getElementById('help-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    // Select initial stage 0 on load
+    selectStage(0);
+  </script>
+</body>
+</html>

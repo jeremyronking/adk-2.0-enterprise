@@ -3,9 +3,14 @@ package main
 
 import (
 	"context"
+	_ "embed"
+	"fmt"
 	"log"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"os"
-	"strings"
+	"time"
 
 	"google.golang.org/adk/v2/agent"
 	"google.golang.org/adk/v2/cmd/launcher"
@@ -18,6 +23,9 @@ import (
 
 	"my-agent-enterprise/agents/chatagent"
 )
+
+//go:embed web/index.html
+var webIndexHTML []byte
 
 func getGCPProject() string {
 	if proj := os.Getenv("GCP_PROJECT_ID"); proj != "" {
@@ -64,35 +72,43 @@ func main() {
 		},
 	}
 
-	args := os.Args[1:]
-	if len(args) > 0 && args[0] == "web" {
-		hasAPIServerAddr := false
-		for _, arg := range args {
-			if strings.HasPrefix(arg, "-api_server_address") {
-				hasAPIServerAddr = true
-				break
-			}
-		}
-		if !hasAPIServerAddr {
-			apiAddr := os.Getenv("API_SERVER_ADDRESS")
-			if apiAddr == "" {
-				apiAddr = "/api"
-			}
-			for i, arg := range args {
-				if arg == "webui" {
-					newArgs := make([]string, 0, len(args)+2)
-					newArgs = append(newArgs, args[:i+1]...)
-					newArgs = append(newArgs, "-api_server_address", apiAddr)
-					newArgs = append(newArgs, args[i+1:]...)
-					args = newArgs
-					break
-				}
-			}
-		}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
 	}
 
-	l := full.NewLauncher()
-	if err = l.Execute(ctx, config, args); err != nil {
-		log.Fatalf("Run failed: %v\n\n%s", err, l.CommandLineSyntax())
+	// Internal port for background ADK launcher API server
+	internalAPIPort := "8081"
+
+	// Start ADK Launcher API server on internal port
+	go func() {
+		l := full.NewLauncher()
+		apiArgs := []string{"web", "-port", internalAPIPort, "api"}
+		if err := l.Execute(ctx, config, apiArgs); err != nil {
+			log.Printf("ADK Launcher API server exited: %v", err)
+		}
+	}()
+
+	time.Sleep(300 * time.Millisecond)
+
+	apiTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%s", internalAPIPort))
+	apiProxy := httputil.NewSingleHostReverseProxy(apiTarget)
+
+	mux := http.NewServeMux()
+
+	// Reverse proxy /api/ calls to ADK backend API server
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		apiProxy.ServeHTTP(w, r)
+	})
+
+	// Serve Production Command Center UI on root / and all non-API paths
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write(webIndexHTML)
+	})
+
+	log.Printf("Enterprise Master Router listening on port %s (serving Production Command Center UI)", port)
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
+		log.Fatalf("HTTP server failed: %v", err)
 	}
 }
