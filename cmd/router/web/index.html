@@ -563,6 +563,10 @@
     let isRunning = false;
     let activeLogFilter = 'all';
 
+    // Hard ceiling on log entries. A live agent run can emit far more events than
+    // the panel can usefully show; without this the DOM grows unbounded.
+    const MAX_LOG_ENTRIES = 500;
+
     function initStageState() {
       stageState = stageDefinitions.map((def, idx) => ({
         index: idx,
@@ -606,6 +610,11 @@
       if (stageIdx !== null) entry.dataset.stage = stageIdx;
       entry.innerHTML = `<span class="text-gray-500">[${time}]</span> ${msg}`;
       container.appendChild(entry);
+
+      while (container.childElementCount > MAX_LOG_ENTRIES) {
+        container.removeChild(container.firstElementChild);
+      }
+
       container.scrollTop = container.scrollHeight;
 
       if (activeLogFilter === 'selected') {
@@ -767,6 +776,63 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    function escapeHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Parses one SSE frame into an ADK event object. A frame may carry an
+    // `event:` line plus one or more `data:` lines; anything else is ignored.
+    function parseSSEEvent(frame) {
+      const data = frame
+        .split('\n')
+        .filter(line => line.startsWith('data:'))
+        .map(line => line.slice(5).trim())
+        .join('');
+
+      if (!data) return null;
+
+      try {
+        return JSON.parse(data);
+      } catch (e) {
+        console.warn('Unparseable SSE frame:', frame);
+        return null;
+      }
+    }
+
+    // Renders an ADK event as a single readable log line.
+    function logLiveAgentEvent(event) {
+      if (event.error) {
+        addLog(`[live_agent]: ⛔ ${escapeHTML(event.error)}`, 'fix');
+        return;
+      }
+
+      // Token deltas. Should not arrive while `streaming` is false, but drop
+      // them defensively — one line per delta is what flooded the log before.
+      if (event.partial) return;
+
+      const author = escapeHTML(event.author || 'agent');
+      const parts = (event.content && event.content.parts) || [];
+
+      for (const part of parts) {
+        if (part.functionCall) {
+          const args = JSON.stringify(part.functionCall.args || {});
+          addLog(`[${author}]: → ${escapeHTML(part.functionCall.name)}(${escapeHTML(args)})`, 'inspector');
+        } else if (part.functionResponse) {
+          const resp = JSON.stringify(part.functionResponse.response || {});
+          addLog(`[${author}]: ← ${escapeHTML(part.functionResponse.name)} ${escapeHTML(truncate(resp, 300))}`, 'inspector');
+        } else if (part.text && part.text.trim()) {
+          const prefix = part.thought ? '💭 ' : '';
+          addLog(`[${author}]: ${prefix}${escapeHTML(truncate(part.text.trim(), 400))}`, 'trade');
+        }
+      }
+    }
+
+    function truncate(str, max) {
+      return str.length > max ? str.slice(0, max) + '…' : str;
+    }
+
     async function runPipeline() {
       if (isRunning) return;
       isRunning = true;
@@ -783,9 +849,9 @@
       addLog(`[router]: Initialized construction orchestration for target structure: "${structure}". Mode: ${mode}`, 'router');
 
       if (mode === 'live_agent') {
-        // LIVE ADK AGENT API MODE (/api/run or SSE backend stream)
+        // LIVE ADK AGENT API MODE (SSE backend stream)
         try {
-          addLog(`[router]: Connecting to Live ADK Backend Agent API at /api/run...`, 'router');
+          addLog(`[router]: Connecting to Live ADK Backend Agent API at /api/run_sse...`, 'router');
 
           // Ensure valid ADK Session ID
           let sessionId = 'sess-' + Date.now();
@@ -812,7 +878,12 @@
               role: 'user',
               parts: [{ text: prompt }]
             },
-            streaming: true
+            // Must stay false. `streaming: true` maps to StreamingModeSSE server-side,
+            // which emits one SSE event per token delta (partial: true). Those partials
+            // are never persisted to the session, so they are invisible in the trace UI
+            // while flooding this log with thousands of entries. Events still arrive
+            // incrementally over /api/run_sse without it — one frame per completed event.
+            streaming: false
           };
 
           const resp = await fetch('/api/run_sse', {
@@ -829,16 +900,27 @@
 
           const reader = resp.body.getReader();
           const decoder = new TextDecoder();
+          let buffer = '';
           let done = false;
 
           while (!done) {
             const { value, done: streamDone } = await reader.read();
             done = streamDone;
-            if (value) {
-              const chunk = decoder.decode(value);
-              addLog(`[live_agent_stream]: ${chunk.substring(0, 120)}...`, 'trade');
+            if (value) buffer += decoder.decode(value, { stream: true });
+
+            // SSE frames are separated by a blank line. Keep the trailing fragment
+            // in the buffer — a single read is not guaranteed to end on a boundary.
+            const frames = buffer.split('\n\n');
+            buffer = done ? '' : frames.pop();
+
+            for (const frame of frames) {
+              const event = parseSSEEvent(frame);
+              if (event) logLiveAgentEvent(event);
             }
           }
+
+          addLog(`[router]: Live agent stream closed. Run complete.`, 'router');
+          finishLiveRun();
         } catch (e) {
           addLog(`[router]: Live agent stream notice (${e.message}). Executing backend pipeline runner...`, 'router');
           await runSimulationPipeline(structure, inspectorMode);
@@ -846,6 +928,18 @@
       } else {
         await runSimulationPipeline(structure, inspectorMode);
       }
+    }
+
+    // The live path has no per-stage state machine, so it clears the running flag
+    // itself; runSimulationPipeline does this at the end of its own loop.
+    function finishLiveRun() {
+      document.getElementById('overall-status').innerText = 'Status: COMPLETED';
+      document.getElementById('overall-status').className = 'px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-xs font-mono';
+      document.getElementById('pipeline-progress').style.width = '100%';
+
+      isRunning = false;
+      document.getElementById('btn-start').disabled = false;
+      document.getElementById('btn-start').classList.remove('opacity-50');
     }
 
     async function runSimulationPipeline(structure, mode) {
