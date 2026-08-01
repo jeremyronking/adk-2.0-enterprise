@@ -100,7 +100,9 @@ Live runs invoke Gemini and cost real money, so a public deployment meters them 
 
 Only the agent-invoking endpoints are metered. The UI, session bookkeeping, and app listing stay free, so the page still works once the quota is spent — it falls back to the simulated pipeline and says so. `GET /api/limits` reports the caller's remaining allowance.
 
-See `internal/ratelimit/`.
+**The counter is in-process.** With more than one serving instance a visitor's effective allowance is multiplied by the instance count, so the router deploys with `--max-instances 1`. That is right for a demo and also hard-caps cost; a real deployment would move the counter to a shared store (Redis, Firestore) and drop the instance limit.
+
+See [`internal/ratelimit/`](internal/ratelimit/).
 
 ---
 

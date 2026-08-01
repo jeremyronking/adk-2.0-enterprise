@@ -35,7 +35,8 @@ deploy-router:
 		--region $(REGION) \
 		--allow-unauthenticated \
 		--set-env-vars GCP_PROJECT_ID="$(PROJECT_ID)",GOOGLE_API_KEY="$$(grep GOOGLE_API_KEY .env 2>/dev/null | cut -d'=' -f2 | tr -d '\"')" \
-		--port 8080
+		--port 8080 \
+		--max-instances 1
 
 deploy-construction:
 	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=construction,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-construction:latest .
