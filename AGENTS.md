@@ -3,12 +3,12 @@
 All AI coding assistants working in this codebase MUST strictly follow project conventions:
 
 1. **Architecture Standards**:
-   - Refer to [docs/architecture.md](file:///Users/king/dev/golang/adk-2.0-enterprise/docs/architecture.md) for distributed microservice layouts and A2A service boundaries.
+   - Refer to [docs/architecture.md](docs/architecture.md) for distributed microservice layouts and A2A service boundaries.
    - Maintain decoupling between `cmd/` entry points and `internal/` domain logic.
 2. **Coding Standards**:
-   - Refer to [docs/coding_conventions.md](file:///Users/king/dev/golang/adk-2.0-enterprise/docs/coding_conventions.md) before refactoring.
+   - Refer to [docs/coding_conventions.md](docs/coding_conventions.md) before refactoring.
    - Struct input fields must specify `json` and `jsonschema` tags.
 3. **Deployment**:
-   - Refer to [docs/deployment.md](file:///Users/king/dev/golang/adk-2.0-enterprise/docs/deployment.md) for Cloud Run containerization and GCP Agent Registry standards.
+   - Refer to [docs/deployment.md](docs/deployment.md) for Cloud Run containerization and GCP Agent Registry standards.
 4. **Quality Gate**:
    - Run `make check` (`gofmt`, `go vet`, `go test ./...`) after modifications.
