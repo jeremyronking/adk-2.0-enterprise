@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
+
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Enterprise Agent Platform - Command Center</title>
-  
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
-  
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0"
+    rel="stylesheet" />
 
   <script>
     tailwind.config = {
@@ -47,6 +51,7 @@
       background: radial-gradient(circle at 50% 0%, #161726 0%, #0a0b14 100%);
       background-attachment: fixed;
     }
+
     .glass-panel {
       background: rgba(22, 23, 38, 0.65);
       backdrop-filter: blur(16px);
@@ -54,47 +59,83 @@
       border: 1px solid rgba(255, 255, 255, 0.08);
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
+
     .glow-cyan {
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.35);
     }
+
     .glow-amber {
       box-shadow: 0 0 20px rgba(255, 186, 32, 0.35);
     }
+
     .glow-emerald {
       box-shadow: 0 0 20px rgba(0, 250, 100, 0.35);
     }
+
     .card-selected {
       ring: 2px;
       border-color: #00f0ff !important;
       box-shadow: 0 0 25px rgba(0, 240, 255, 0.4) !important;
     }
+
     .pulse-animation {
       animation: pulse-ring 2s infinite ease-in-out;
     }
+
     @keyframes pulse-ring {
-      0% { transform: scale(0.98); opacity: 0.9; }
-      50% { transform: scale(1.02); opacity: 1; }
-      100% { transform: scale(0.98); opacity: 0.9; }
+      0% {
+        transform: scale(0.98);
+        opacity: 0.9;
+      }
+
+      50% {
+        transform: scale(1.02);
+        opacity: 1;
+      }
+
+      100% {
+        transform: scale(0.98);
+        opacity: 0.9;
+      }
     }
+
     /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: rgba(10, 11, 20, 0.5); }
-    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.4); }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(10, 11, 20, 0.5);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 240, 255, 0.4);
+    }
   </style>
 </head>
-<body class="text-gray-200 min-h-screen flex flex-col font-sans antialiased overflow-x-hidden selection:bg-brand-cyan selection:text-black">
+
+<body
+  class="text-gray-200 min-h-screen flex flex-col font-sans antialiased overflow-x-hidden selection:bg-brand-cyan selection:text-black">
 
   <!-- TOP NAVIGATION HEADER -->
   <header class="glass-panel border-b border-white/10 sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
     <div class="flex items-center gap-4">
-      <div class="w-10 h-10 rounded-lg bg-brand-cyan/10 border border-brand-cyan/40 flex items-center justify-center text-brand-cyan">
+      <div
+        class="w-10 h-10 rounded-lg bg-brand-cyan/10 border border-brand-cyan/40 flex items-center justify-center text-brand-cyan">
         <span class="material-symbols-outlined">hub</span>
       </div>
       <div>
         <div class="flex items-center gap-2">
           <h1 class="font-display font-bold text-lg text-white tracking-wide">Enterprise Agent Platform</h1>
-          <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">v2.0 Orchestrator</span>
+          <span
+            class="px-2 py-0.5 rounded text-[10px] font-mono bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30">v2.0
+            Orchestrator</span>
         </div>
         <p class="text-xs text-gray-400 font-mono">Multi-Agent Construction Microservices (Cloud Run Production)</p>
       </div>
@@ -104,16 +145,20 @@
     <div class="hidden lg:flex items-center gap-3 bg-brand-navy/60 px-4 py-2 rounded-xl border border-white/5">
       <span class="text-xs text-gray-400 font-mono">Services:</span>
       <div class="flex items-center gap-2 text-xs font-mono">
-        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <span
+          class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> router
         </span>
-        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <span
+          class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> construction
         </span>
-        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <span
+          class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> weather
         </span>
-        <span class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+        <span
+          class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> time
         </span>
       </div>
@@ -122,8 +167,10 @@
     <!-- Right User / Session Info -->
     <div class="flex items-center gap-4">
       <div class="text-right hidden sm:block">
-        <div class="text-xs font-mono text-gray-300">Environment: <span id="env-tag" class="text-brand-cyan">GCP Cloud Run</span></div>
-        <div class="text-[11px] font-mono text-gray-400">Trace: <span class="text-emerald-400">otel-cloud-run</span></div>
+        <div class="text-xs font-mono text-gray-300">Environment: <span id="env-tag" class="text-brand-cyan">GCP Cloud
+            Run</span></div>
+        <div class="text-[11px] font-mono text-gray-400">Trace: <span class="text-emerald-400">otel-cloud-run</span>
+        </div>
       </div>
       <button onclick="toggleHelpModal()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 transition">
         <span class="material-symbols-outlined text-sm">help_outline</span>
@@ -134,7 +181,7 @@
   <!-- CONTROLS & PIPELINE TOOLBAR -->
   <section class="px-6 py-4 border-b border-white/5 bg-brand-surface/40">
     <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-      
+
       <!-- Target Configuration -->
       <div class="flex items-center gap-3 w-full md:w-auto flex-wrap">
         <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
@@ -150,14 +197,16 @@
         <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
           <span class="text-gray-400 font-mono">Execution Mode:</span>
           <select id="mode-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
-            <option value="live_agent" class="bg-brand-card text-white">🌐 Live ADK Backend Agent API (/api/run)</option>
+            <option value="live_agent" class="bg-brand-card text-white">🌐 Live ADK Backend Agent API (/api/run)
+            </option>
             <option value="simulation_demo" class="bg-brand-card text-white">⚡ High-Speed Simulation Demo</option>
           </select>
         </div>
 
         <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
           <span class="text-gray-400 font-mono">Inspector Gate:</span>
-          <select id="inspector-mode-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
+          <select id="inspector-mode-select"
+            class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
             <option value="repair_demo" class="bg-brand-card text-white">⚡ Defect & Repair Demo (Framing Stage)</option>
             <option value="random" class="bg-brand-card text-white">🎲 Random (25% Defect Chance)</option>
             <option value="always_pass" class="bg-brand-card text-white">✅ Always Pass</option>
@@ -167,10 +216,12 @@
 
       <!-- Execution Controls -->
       <div class="flex items-center gap-3 w-full md:w-auto justify-end">
-        <button id="btn-start" onclick="runPipeline()" class="px-5 py-2.5 rounded-lg bg-brand-cyan hover:bg-brand-cyan/90 text-black font-semibold text-xs flex items-center gap-2 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition">
-          <span class="material-symbols-outlined text-sm">play_arrow</span> Start Orchestration
+        <button id="btn-start" onclick="runPipeline()"
+          class="px-5 py-2.5 rounded-lg bg-brand-cyan hover:bg-brand-cyan/90 text-black font-semibold text-xs flex items-center gap-2 whitespace-nowrap shrink-0 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition">
+          <span class="material-symbols-outlined text-sm">play_arrow</span> Start Construction
         </button>
-        <button id="btn-reset" onclick="resetPipeline()" class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-mono text-xs flex items-center gap-1.5 border border-white/10 transition">
+        <button id="btn-reset" onclick="resetPipeline()"
+          class="px-4 py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-300 font-mono text-xs flex items-center gap-1.5 whitespace-nowrap shrink-0 border border-white/10 transition">
           <span class="material-symbols-outlined text-sm">restart_alt</span> Reset
         </button>
       </div>
@@ -183,7 +234,7 @@
 
     <!-- LEFT / MAIN: WORKFLOW PIPELINE CANVAS (8 COLS) -->
     <div class="lg:col-span-8 flex flex-col gap-6">
-      
+
       <!-- Stage Overview Header -->
       <div class="glass-panel p-5 rounded-2xl flex items-center justify-between">
         <div>
@@ -191,109 +242,131 @@
             <span class="material-symbols-outlined text-brand-cyan">account_tree</span>
             Construction Multi-Agent Workflow
           </h2>
-          <p class="text-xs text-gray-400 font-mono mt-0.5">Click any stage card to inspect its persisted thought stream and inspection history</p>
+          <p class="text-xs text-gray-400 font-mono mt-0.5">Click any stage card to inspect its persisted thought stream
+            and inspection history</p>
         </div>
-        <div id="overall-status" class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-400">
+        <div id="overall-status"
+          class="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-gray-400">
           Status: IDLE
         </div>
       </div>
 
       <!-- HORIZONTAL INTERACTIVE STAGE CARDS -->
       <div class="glass-panel p-6 rounded-2xl flex flex-col gap-4 overflow-x-auto">
-        
+
         <!-- Stage Stepper Cards Grid -->
         <div class="grid grid-cols-5 gap-3 relative">
-          
+
           <!-- STAGE 1: FOUNDATION -->
-          <div id="card-stage-0" onclick="selectStage(0)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+          <div id="card-stage-0" onclick="selectStage(0)"
+            class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
             <div>
               <div class="flex items-center justify-between">
-                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">01</span>
-                <span id="badge-stage-0" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+                <span
+                  class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">01</span>
+                <span id="badge-stage-0"
+                  class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
               </div>
               <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm text-gray-400">foundation</span> Foundation
               </h3>
               <p class="text-[10px] text-gray-400 font-mono mt-1">foundation_agent</p>
             </div>
-            
-            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+
+            <div
+              class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
               <span>Attempt: <b id="attempt-stage-0" class="text-white">0</b></span>
               <span id="time-stage-0">--</span>
             </div>
           </div>
 
           <!-- STAGE 2: FRAMING -->
-          <div id="card-stage-1" onclick="selectStage(1)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+          <div id="card-stage-1" onclick="selectStage(1)"
+            class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
             <div>
               <div class="flex items-center justify-between">
-                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">02</span>
-                <span id="badge-stage-1" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+                <span
+                  class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">02</span>
+                <span id="badge-stage-1"
+                  class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
               </div>
               <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm text-gray-400">crop_square</span> Framing
               </h3>
               <p class="text-[10px] text-gray-400 font-mono mt-1">framing_agent</p>
             </div>
-            
-            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+
+            <div
+              class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
               <span>Attempt: <b id="attempt-stage-1" class="text-white">0</b></span>
               <span id="time-stage-1">--</span>
             </div>
           </div>
 
           <!-- STAGE 3: ROOFING -->
-          <div id="card-stage-2" onclick="selectStage(2)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+          <div id="card-stage-2" onclick="selectStage(2)"
+            class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
             <div>
               <div class="flex items-center justify-between">
-                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">03</span>
-                <span id="badge-stage-2" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+                <span
+                  class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">03</span>
+                <span id="badge-stage-2"
+                  class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
               </div>
               <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm text-gray-400">roofing</span> Roofing
               </h3>
               <p class="text-[10px] text-gray-400 font-mono mt-1">roofing_agent</p>
             </div>
-            
-            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+
+            <div
+              class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
               <span>Attempt: <b id="attempt-stage-2" class="text-white">0</b></span>
               <span id="time-stage-2">--</span>
             </div>
           </div>
 
           <!-- STAGE 4: EXTERIOR -->
-          <div id="card-stage-3" onclick="selectStage(3)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+          <div id="card-stage-3" onclick="selectStage(3)"
+            class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
             <div>
               <div class="flex items-center justify-between">
-                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">04</span>
-                <span id="badge-stage-3" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+                <span
+                  class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">04</span>
+                <span id="badge-stage-3"
+                  class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
               </div>
               <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm text-gray-400">house</span> Exterior
               </h3>
               <p class="text-[10px] text-gray-400 font-mono mt-1">exterior_agent</p>
             </div>
-            
-            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+
+            <div
+              class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
               <span>Attempt: <b id="attempt-stage-3" class="text-white">0</b></span>
               <span id="time-stage-3">--</span>
             </div>
           </div>
 
           <!-- STAGE 5: INTERIOR -->
-          <div id="card-stage-4" onclick="selectStage(4)" class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
+          <div id="card-stage-4" onclick="selectStage(4)"
+            class="stage-card glass-panel p-3.5 rounded-xl border border-white/10 flex flex-col justify-between h-44 relative transition-all duration-300 cursor-pointer hover:border-brand-cyan/50">
             <div>
               <div class="flex items-center justify-between">
-                <span class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">05</span>
-                <span id="badge-stage-4" class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
+                <span
+                  class="w-7 h-7 rounded-lg bg-white/5 flex items-center justify-center text-gray-400 text-xs font-mono font-bold border border-white/10">05</span>
+                <span id="badge-stage-4"
+                  class="px-1.5 py-0.5 rounded text-[9px] font-mono bg-white/5 text-gray-400 border border-white/10">QUEUED</span>
               </div>
               <h3 class="font-display font-semibold text-xs text-white mt-3 flex items-center gap-1">
                 <span class="material-symbols-outlined text-sm text-gray-400">chair</span> Interior
               </h3>
               <p class="text-[10px] text-gray-400 font-mono mt-1">interior_agent</p>
             </div>
-            
-            <div class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
+
+            <div
+              class="mt-auto border-t border-white/5 pt-2 text-[10px] font-mono text-gray-400 flex items-center justify-between">
               <span>Attempt: <b id="attempt-stage-4" class="text-white">0</b></span>
               <span id="time-stage-4">--</span>
             </div>
@@ -303,7 +376,9 @@
 
         <!-- Connection Progress Bar -->
         <div class="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-2">
-          <div id="pipeline-progress" class="h-full bg-gradient-to-r from-brand-cyan via-brand-amber to-brand-emerald w-0 transition-all duration-500"></div>
+          <div id="pipeline-progress"
+            class="h-full bg-gradient-to-r from-brand-cyan via-brand-amber to-brand-emerald w-0 transition-all duration-500">
+          </div>
         </div>
 
       </div>
@@ -314,23 +389,28 @@
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-sm text-brand-cyan">psychology</span>
             <h3 class="font-display font-semibold text-xs text-white">
-              Persisted Thought Stream: <span id="selected-phase-title" class="text-brand-cyan font-bold">Foundation</span>
+              Persisted Thought Stream: <span id="selected-phase-title"
+                class="text-brand-cyan font-bold">Foundation</span>
             </h3>
           </div>
-          
+
           <div class="flex items-center gap-2">
-            <span id="active-agent-tag" class="px-2 py-0.5 rounded bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[10px] font-mono">
+            <span id="active-agent-tag"
+              class="px-2 py-0.5 rounded bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-[10px] font-mono">
               foundation_agent
             </span>
-            <span id="thought-count-badge" class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 text-[10px] font-mono">
+            <span id="thought-count-badge"
+              class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-400 text-[10px] font-mono">
               0 entries
             </span>
           </div>
         </div>
 
         <!-- Persisted Thoughts Scroll Container -->
-        <div id="thought-stream-container" class="bg-brand-navy/80 p-4 rounded-xl border border-white/5 font-mono text-xs max-h-48 overflow-y-auto space-y-2">
-          <div class="text-gray-500 italic text-[11px]">[stage 01 - foundation]: Click "Start Orchestration" or select another phase card to view its persisted thoughts.</div>
+        <div id="thought-stream-container"
+          class="bg-brand-navy/80 p-4 rounded-xl border border-white/5 font-mono text-xs max-h-48 overflow-y-auto space-y-2">
+          <div class="text-gray-500 italic text-[11px]">[stage 01 - foundation]: Click "Start Construction" or select
+            another phase card to view its persisted thoughts.</div>
         </div>
       </div>
 
@@ -338,22 +418,24 @@
 
     <!-- RIGHT: INSPECTOR AUDIT DRAWER (4 COLS - REACTIVE TO SELECTED STAGE) -->
     <div class="lg:col-span-4 flex flex-col gap-6">
-      
+
       <div class="glass-panel p-5 rounded-2xl flex flex-col gap-4 border border-white/10">
-        
+
         <!-- Drawer Header -->
         <div class="flex items-center justify-between border-b border-white/10 pb-3">
           <div class="flex items-center gap-2">
             <span class="material-symbols-outlined text-brand-amber">verified_user</span>
             <h2 class="font-display font-semibold text-sm text-white">Inspector Agent Audit</h2>
           </div>
-          <span id="inspector-badge" class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-gray-400 border border-white/10">
+          <span id="inspector-badge"
+            class="px-2 py-0.5 rounded text-[10px] font-mono bg-white/5 text-gray-400 border border-white/10">
             IDLE
           </span>
         </div>
 
         <!-- Selected Phase Info -->
-        <div class="flex items-center justify-between text-xs font-mono text-gray-400 bg-brand-navy/60 p-2.5 rounded-lg border border-white/5">
+        <div
+          class="flex items-center justify-between text-xs font-mono text-gray-400 bg-brand-navy/60 p-2.5 rounded-lg border border-white/5">
           <span>Viewing Phase:</span>
           <span id="inspector-phase-target" class="text-brand-cyan font-bold">01 - foundation</span>
         </div>
@@ -362,7 +444,8 @@
         <div class="bg-brand-navy/80 p-4 rounded-xl border border-white/5 flex flex-col gap-2">
           <div class="flex items-center justify-between text-xs">
             <span class="text-gray-400 font-mono text-[11px]">Inspection Result:</span>
-            <span id="inspector-status-pill" class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Awaiting Run</span>
+            <span id="inspector-status-pill"
+              class="text-[10px] font-mono px-2 py-0.5 rounded bg-gray-500/20 text-gray-400">Awaiting Run</span>
           </div>
           <p id="inspector-findings-text" class="text-xs font-mono text-gray-300 leading-normal italic">
             "No inspection performed yet for this phase."
@@ -370,7 +453,8 @@
         </div>
 
         <!-- Repair Dispatch Panel -->
-        <div id="repair-panel" class="bg-brand-navy/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2 transition-all duration-300">
+        <div id="repair-panel"
+          class="bg-brand-navy/60 border border-white/5 p-4 rounded-xl flex flex-col gap-2 transition-all duration-300">
           <div class="flex items-center gap-2 text-gray-400 font-semibold text-xs">
             <span class="material-symbols-outlined text-sm">build</span>
             Auto-Repair Dispatch Log
@@ -404,26 +488,34 @@
 
     <!-- BOTTOM FULL WIDTH: A2A PROTOCOL TELEMETRY LOG CONSOLE (12 COLS) -->
     <div class="lg:col-span-12 glass-panel p-5 rounded-2xl flex flex-col gap-3 border border-white/10 mt-2">
-      
+
       <div class="flex items-center justify-between border-b border-white/10 pb-3">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-brand-cyan text-sm">terminal</span>
           <h3 class="font-display font-semibold text-xs text-white">Live A2A Protocol & Telemetry Log Stream</h3>
         </div>
-        
+
         <div class="flex items-center gap-2 text-xs font-mono">
           <span class="text-gray-400">Filter:</span>
-          <button onclick="filterLogs('all')" class="px-2 py-0.5 rounded bg-white/10 text-white hover:bg-white/20 text-[10px]">All</button>
-          <button onclick="filterLogs('selected')" class="px-2 py-0.5 rounded bg-brand-cyan/20 text-brand-cyan hover:bg-brand-cyan/30 text-[10px]">Selected Stage Only</button>
-          <button onclick="filterLogs('inspector')" class="px-2 py-0.5 rounded bg-brand-amber/20 text-brand-amber hover:bg-brand-amber/30 text-[10px]">Inspector</button>
-          <button onclick="filterLogs('trades')" class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[10px]">Trades</button>
-          <button onclick="clearLogs()" class="px-2 py-0.5 rounded bg-white/5 text-gray-400 hover:bg-white/10 text-[10px]">Clear</button>
+          <button onclick="filterLogs('all')"
+            class="px-2 py-0.5 rounded bg-white/10 text-white hover:bg-white/20 text-[10px]">All</button>
+          <button onclick="filterLogs('selected')"
+            class="px-2 py-0.5 rounded bg-brand-cyan/20 text-brand-cyan hover:bg-brand-cyan/30 text-[10px]">Selected
+            Stage Only</button>
+          <button onclick="filterLogs('inspector')"
+            class="px-2 py-0.5 rounded bg-brand-amber/20 text-brand-amber hover:bg-brand-amber/30 text-[10px]">Inspector</button>
+          <button onclick="filterLogs('trades')"
+            class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 text-[10px]">Trades</button>
+          <button onclick="clearLogs()"
+            class="px-2 py-0.5 rounded bg-white/5 text-gray-400 hover:bg-white/10 text-[10px]">Clear</button>
         </div>
       </div>
 
       <!-- Log Terminal Container -->
-      <div id="log-container" class="bg-brand-navy/95 p-4 rounded-xl font-mono text-xs h-48 overflow-y-auto space-y-1.5 border border-white/5">
-        <div class="text-gray-500 italic">[system]: A2A telemetry logger ready. Select any phase card above to filter thoughts and logs.</div>
+      <div id="log-container"
+        class="bg-brand-navy/95 p-4 rounded-xl font-mono text-xs h-48 overflow-y-auto space-y-1.5 border border-white/5">
+        <div class="text-gray-500 italic">[system]: A2A telemetry logger ready. Select any phase card above to filter
+          thoughts and logs.</div>
       </div>
 
     </div>
@@ -431,7 +523,8 @@
   </main>
 
   <!-- HELP MODAL -->
-  <div id="help-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <div id="help-modal"
+    class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="glass-panel p-6 rounded-2xl max-w-lg w-full border border-white/10 space-y-4">
       <div class="flex items-center justify-between border-b border-white/10 pb-3">
         <h3 class="font-display font-bold text-white text-base">Enterprise Platform Command Center</h3>
@@ -442,8 +535,10 @@
       <div class="text-xs text-gray-300 space-y-2 font-mono">
         <p>This Production UI connects directly to live ADK backend agent microservices deployed on GCP Cloud Run.</p>
         <ul class="list-disc pl-4 space-y-1 text-gray-400">
-          <li><b>Live Backend Mode:</b> Invokes live Go `chat_agent` & `construction_agent` microservices via `/api/run`.</li>
-          <li><b>Clickable Stages:</b> Click any phase card at any time to view its persisted thoughts & inspector audit history.</li>
+          <li><b>Live Backend Mode:</b> Invokes live Go `chat_agent` & `construction_agent` microservices via
+            `/api/run`.</li>
+          <li><b>Clickable Stages:</b> Click any phase card at any time to view its persisted thoughts & inspector audit
+            history.</li>
           <li><b>Inspector Gate:</b> Evaluates work quality and handles repair loops automatically.</li>
         </ul>
       </div>
@@ -690,7 +785,7 @@
       if (mode === 'live_agent') {
         try {
           addLog(`[router]: Connecting to Live ADK Backend Agent API at /api/run...`, 'router');
-          
+
           const prompt = `Construct a ${structure}. Run foundation, framing, roofing, exterior, and interior stages with phase inspection.`;
           const resp = await fetch('/api/run', {
             method: 'POST',
@@ -847,4 +942,5 @@
     selectStage(0);
   </script>
 </body>
+
 </html>
