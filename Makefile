@@ -26,6 +26,14 @@ build:
 	go build -o bin/weather ./cmd/weather
 	go build -o bin/time ./cmd/time
 
+# Reads a variable out of .env without breaking on values containing "=".
+# $(1) is the variable name. -E is required: BSD sed (macOS) does not support
+# \+ or \? in basic regex, and silently yields an empty value without it.
+envval = $$(sed -nE 's/^[[:space:]]*(export[[:space:]]+)?$(1)=//p' .env 2>/dev/null | tail -1 | sed -E 's/^"//; s/"$$//')
+
+# --set-env-vars REPLACES the container environment. Every variable the service
+# needs must be listed here, or a deploy silently drops anything set
+# out-of-band with `gcloud run services update --update-env-vars`.
 deploy-router:
 	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=router,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-router:latest .
 	gcloud run deploy adk-enterprise-router \
@@ -34,7 +42,7 @@ deploy-router:
 		--platform managed \
 		--region $(REGION) \
 		--allow-unauthenticated \
-		--set-env-vars GCP_PROJECT_ID="$(PROJECT_ID)",GOOGLE_API_KEY="$$(grep GOOGLE_API_KEY .env 2>/dev/null | cut -d'=' -f2 | tr -d '\"')" \
+		--set-env-vars GCP_PROJECT_ID="$(PROJECT_ID)",GOOGLE_API_KEY="$(call envval,GOOGLE_API_KEY)",TRUST_CLOUDFLARE="$(call envval,TRUST_CLOUDFLARE)",ORIGIN_SHARED_SECRET="$(call envval,ORIGIN_SHARED_SECRET)" \
 		--port 8080 \
 		--max-instances 1
 
