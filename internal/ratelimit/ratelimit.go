@@ -25,6 +25,11 @@ type Config struct {
 	RunsPerMinute int
 	// RunsPerDay is the hard daily cap for expensive endpoints, per IP.
 	RunsPerDay int
+	// TotalRunsPerDay caps runs across ALL visitors combined. The per-IP limit
+	// bounds what one visitor can spend; only this bounds the aggregate bill,
+	// since nothing stops many distinct visitors each using their full quota.
+	// Zero disables the global cap.
+	TotalRunsPerDay int
 	// Paths are the URL path prefixes treated as expensive (agent invocations).
 	Paths []string
 	// TrustCloudflare makes client IP resolution read CF-Connecting-IP. Enable
@@ -58,8 +63,20 @@ type Limiter struct {
 	mu       sync.Mutex
 	visitors map[string]*visitor
 	cfg      Config
+	// Aggregate counter across every visitor, rolled over with the UTC day.
+	totalCount int
+	totalDay   time.Time
 	// now is overridable so tests can advance the clock.
 	now func() time.Time
+}
+
+// rollGlobalWindow resets the aggregate counter when the UTC day changes.
+// Callers must hold l.mu.
+func (l *Limiter) rollGlobalWindow() {
+	if d := dayBoundary(l.now()); d.After(l.totalDay) {
+		l.totalDay = d
+		l.totalCount = 0
+	}
 }
 
 // New creates a Limiter and starts a background sweep for stale visitors.
@@ -126,6 +143,10 @@ type Status struct {
 	RunsPerDay int `json:"runsPerDay"`
 	Used       int `json:"used"`
 	Remaining  int `json:"remaining"`
+	// SharedRemaining is what is left of the aggregate daily budget across all
+	// visitors. A caller can have per-IP allowance left while this is zero.
+	SharedRemaining int `json:"sharedRemaining"`
+	SharedPerDay    int `json:"sharedPerDay"`
 }
 
 // Status returns the caller's current daily usage.
@@ -133,12 +154,26 @@ func (l *Limiter) Status(r *http.Request) Status {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
+	l.rollGlobalWindow()
 	v := l.getVisitor(ClientIP(r, l.cfg.TrustCloudflare))
-	remaining := l.cfg.RunsPerDay - v.dayCount
-	if remaining < 0 {
-		remaining = 0
+
+	remaining := max0(l.cfg.RunsPerDay - v.dayCount)
+	shared := max0(l.cfg.TotalRunsPerDay - l.totalCount)
+
+	return Status{
+		RunsPerDay:      l.cfg.RunsPerDay,
+		Used:            v.dayCount,
+		Remaining:       remaining,
+		SharedRemaining: shared,
+		SharedPerDay:    l.cfg.TotalRunsPerDay,
 	}
-	return Status{RunsPerDay: l.cfg.RunsPerDay, Used: v.dayCount, Remaining: remaining}
+}
+
+func max0(n int) int {
+	if n < 0 {
+		return 0
+	}
+	return n
 }
 
 // Middleware applies the limits to expensive paths and passes everything else
@@ -166,7 +201,19 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 		}
 
 		l.mu.Lock()
+		l.rollGlobalWindow()
 		v := l.getVisitor(ClientIP(r, l.cfg.TrustCloudflare))
+
+		// Aggregate cap first: once the day's budget is gone it is gone for
+		// everyone, regardless of an individual visitor's remaining allowance.
+		if l.cfg.TotalRunsPerDay > 0 && l.totalCount >= l.cfg.TotalRunsPerDay {
+			resetIn := int(time.Until(l.totalDay.Add(24 * time.Hour)).Seconds())
+			l.mu.Unlock()
+			writeLimitResponse(w, http.StatusTooManyRequests, resetIn,
+				"DAILY_BUDGET_REACHED",
+				"The shared daily budget for live agent runs is spent. It resets at 00:00 UTC. The simulated pipeline is unlimited and shows the same workflow.")
+			return
+		}
 
 		if l.cfg.RunsPerDay > 0 && v.dayCount >= l.cfg.RunsPerDay {
 			resetIn := int(time.Until(v.dayStart.Add(24 * time.Hour)).Seconds())
@@ -186,6 +233,7 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 		}
 
 		v.dayCount++
+		l.totalCount++
 		remaining := l.cfg.RunsPerDay - v.dayCount
 		l.mu.Unlock()
 

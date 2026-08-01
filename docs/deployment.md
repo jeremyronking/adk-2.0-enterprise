@@ -68,6 +68,7 @@ Container builds are processed remotely using GCP Cloud Build. The build process
 | `PORT` | Container HTTP listen port. | Optional | `8080` |
 | `DEMO_RUNS_PER_DAY` | Live agent runs allowed per client IP per day. | Optional | `3` |
 | `DEMO_RUNS_PER_MINUTE` | Burst limit per client IP. | Optional | `2` |
+| `DEMO_TOTAL_RUNS_PER_DAY` | Live runs per day across **all** visitors. Bounds the aggregate bill. | Optional | `10` |
 | `TRUST_CLOUDFLARE` | Read the client IP from `CF-Connecting-IP`. Requires `ORIGIN_SHARED_SECRET`. | Optional | `false` |
 | `ORIGIN_SHARED_SECRET` | Secret injected by the edge; metered endpoints reject requests without it. | Optional | unset |
 
