@@ -149,6 +149,22 @@ make test    # tests only
 make build   # build all binaries into bin/
 ```
 
+### Secret pre-commit hook
+
+GitHub push protection covers well-known vendor formats, but its free tier does
+not scan generic or non-provider patterns — including the `AQ.Ab…` Google AI
+Studio key format this project uses. `scripts/check-secrets.sh` closes that gap
+locally:
+
+```bash
+ln -sf ../../scripts/check-secrets.sh .git/hooks/pre-commit   # install
+./scripts/check-secrets.sh --all                              # scan everything
+git commit --no-verify                                        # deliberate bypass
+```
+
+It blocks staged changes containing credential-shaped strings and allows the
+documented placeholders in `.env.example`.
+
 The Command Center UI lives in `web/index.html` and is embedded into the router binary with `go:embed`. Two byte-identical copies exist for the build and docs — keep all three in sync:
 
 ```
