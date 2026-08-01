@@ -99,6 +99,16 @@
       }
     }
 
+    /* Log entries wrap instead of clipping, so full agent messages stay readable.
+       The hanging indent keeps continuation lines clear of the timestamp column. */
+    .log-item {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      padding-left: 1.25rem;
+      text-indent: -1.25rem;
+      line-height: 1.45;
+    }
+
     /* Custom scrollbar */
     ::-webkit-scrollbar {
       width: 6px;
@@ -197,7 +207,7 @@
         <div class="flex items-center gap-2 bg-brand-card px-3 py-2 rounded-lg border border-white/10 text-xs">
           <span class="text-gray-400 font-mono">Execution Mode:</span>
           <select id="mode-select" class="bg-transparent text-white font-medium focus:outline-none cursor-pointer">
-            <option value="live_agent" class="bg-brand-card text-white">🌐 Live ADK Backend Agent API (/api/run)
+            <option value="live_agent" class="bg-brand-card text-white">🌐 Live ADK Backend Agent API (/api/run_sse)
             </option>
             <option value="simulation_demo" class="bg-brand-card text-white">⚡ High-Speed Simulation Demo</option>
           </select>
@@ -513,7 +523,7 @@
 
       <!-- Log Terminal Container -->
       <div id="log-container"
-        class="bg-brand-navy/95 p-4 rounded-xl font-mono text-xs h-48 overflow-y-auto space-y-1.5 border border-white/5">
+        class="bg-brand-navy/95 p-4 rounded-xl font-mono text-xs h-80 resize-y overflow-y-auto space-y-1.5 border border-white/5">
         <div class="text-gray-500 italic">[system]: A2A telemetry logger ready. Select any phase card above to filter
           thoughts and logs.</div>
       </div>
@@ -536,7 +546,9 @@
         <p>This Production UI connects directly to live ADK backend agent microservices deployed on GCP Cloud Run.</p>
         <ul class="list-disc pl-4 space-y-1 text-gray-400">
           <li><b>Live Backend Mode:</b> Invokes live Go `chat_agent` & `construction_agent` microservices via
-            `/api/run`.</li>
+            `/api/run_sse`, streaming one event per completed agent step.</li>
+          <li><b>Inspector Gate (simulation only):</b> The gate selector shapes the simulated run; in live mode the
+            real `inspector_agent` decides PASS/FIX.</li>
           <li><b>Clickable Stages:</b> Click any phase card at any time to view its persisted thoughts & inspector audit
             history.</li>
           <li><b>Inspector Gate:</b> Evaluates work quality and handles repair loops automatically.</li>
@@ -563,9 +575,11 @@
     let isRunning = false;
     let activeLogFilter = 'all';
 
-    // Hard ceiling on log entries. A live agent run can emit far more events than
-    // the panel can usefully show; without this the DOM grows unbounded.
-    const MAX_LOG_ENTRIES = 500;
+    // Backstop against unbounded DOM growth. A full live run is well under a
+    // hundred entries now that token deltas are no longer logged, so this should
+    // never actually prune — it only guards against a runaway stream.
+    const MAX_LOG_ENTRIES = 2000;
+    let logPruneNoticeShown = false;
 
     function initStageState() {
       stageState = stageDefinitions.map((def, idx) => ({
@@ -611,6 +625,12 @@
       entry.innerHTML = `<span class="text-gray-500">[${time}]</span> ${msg}`;
       container.appendChild(entry);
 
+      // Never prune silently — a truncated log should say so.
+      if (container.childElementCount > MAX_LOG_ENTRIES && !logPruneNoticeShown) {
+        logPruneNoticeShown = true;
+        console.warn(`Log exceeded ${MAX_LOG_ENTRIES} entries; oldest entries are being dropped.`);
+        entry.innerHTML += ` <span class="text-brand-amber">(log capped at ${MAX_LOG_ENTRIES} entries — older lines dropped)</span>`;
+      }
       while (container.childElementCount > MAX_LOG_ENTRIES) {
         container.removeChild(container.firstElementChild);
       }
@@ -801,7 +821,54 @@
       }
     }
 
-    // Renders an ADK event as a single readable log line.
+    // Sub-agents run as agenttool calls, so every event is authored by
+    // construction_agent — the phase is identified by the tool name, not the author.
+    const TRADE_AGENT_TO_STAGE = {
+      foundation_agent: 0,
+      framing_agent: 1,
+      roofing_agent: 2,
+      exterior_agent: 3,
+      interior_agent: 4
+    };
+    const INSPECTOR_AGENT = 'inspector_agent';
+
+    // Live-run bookkeeping, reset at the start of each live pipeline.
+    let liveStage = 0;
+    let liveRepairing = false;
+
+    function resetLiveRunState() {
+      liveStage = 0;
+      liveRepairing = false;
+    }
+
+    // The inspector is invoked with a free-text request ("Inspect framing phase
+    // for Luxury Villa"), so recover the phase by name and fall back to whichever
+    // stage is currently active.
+    function stageFromText(text) {
+      const lower = String(text || '').toLowerCase();
+      const idx = stageDefinitions.findIndex(def => lower.includes(def.name));
+      return idx >= 0 ? idx : liveStage;
+    }
+
+    // Inspector verdicts come back as prose from an LLM, so match the explicit
+    // status marker first and only then fall back to looser wording.
+    function inspectorVerdict(text) {
+      const s = String(text || '');
+      if (/status\W*:?\W*\**\s*fix/i.test(s)) return 'FIX';
+      if (/status\W*:?\W*\**\s*pass/i.test(s)) return 'PASS';
+      if (/\bapproved\b/i.test(s)) return 'PASS';
+      if (/\bfix\b|\bfailed\b|\bviolation\b/i.test(s)) return 'FIX';
+      return 'PASS';
+    }
+
+    function liveResultText(response) {
+      if (response == null) return '';
+      if (typeof response === 'string') return response;
+      return response.result || response.findings || response.message || JSON.stringify(response);
+    }
+
+    // Renders an ADK event into the log and drives the stage cards, thought
+    // stream, and inspector drawer so live mode animates like the simulation.
     function logLiveAgentEvent(event) {
       if (event.error) {
         addLog(`[live_agent]: ⛔ ${escapeHTML(event.error)}`, 'fix');
@@ -812,25 +879,94 @@
       // them defensively — one line per delta is what flooded the log before.
       if (event.partial) return;
 
-      const author = escapeHTML(event.author || 'agent');
+      const author = event.author || 'agent';
       const parts = (event.content && event.content.parts) || [];
 
       for (const part of parts) {
         if (part.functionCall) {
-          const args = JSON.stringify(part.functionCall.args || {});
-          addLog(`[${author}]: → ${escapeHTML(part.functionCall.name)}(${escapeHTML(args)})`, 'inspector');
+          handleLiveFunctionCall(author, part.functionCall);
         } else if (part.functionResponse) {
-          const resp = JSON.stringify(part.functionResponse.response || {});
-          addLog(`[${author}]: ← ${escapeHTML(part.functionResponse.name)} ${escapeHTML(truncate(resp, 300))}`, 'inspector');
+          handleLiveFunctionResponse(author, part.functionResponse);
         } else if (part.text && part.text.trim()) {
+          const text = part.text.trim();
           const prefix = part.thought ? '💭 ' : '';
-          addLog(`[${author}]: ${prefix}${escapeHTML(truncate(part.text.trim(), 400))}`, 'trade');
+          addLog(`[${escapeHTML(author)}]: ${prefix}${escapeHTML(text)}`, 'trade', liveStage);
+          addThought(liveStage, `${prefix}[${author}]: ${text}`, part.thought ? 'thought' : 'inspection');
         }
       }
     }
 
-    function truncate(str, max) {
-      return str.length > max ? str.slice(0, max) + '…' : str;
+    function handleLiveFunctionCall(author, call) {
+      const name = call.name;
+      const request = (call.args && (call.args.request || call.args.structure_type)) || '';
+      addLog(`[${escapeHTML(author)}]: → ${escapeHTML(name)}(${escapeHTML(JSON.stringify(call.args || {}))})`, 'inspector', liveStage);
+
+      if (name in TRADE_AGENT_TO_STAGE) {
+        const idx = TRADE_AGENT_TO_STAGE[name];
+        liveStage = idx;
+        selectStage(idx);
+
+        const s = stageState[idx];
+        liveRepairing = /repair|fix/i.test(request);
+        if (liveRepairing) {
+          s.repairAttempts = (s.repairAttempts || 0) + 1;
+          s.repairPayload = `action: "repair", phase: "${stageDefinitions[idx].name}"`;
+          updateStageCardUI(idx, 'REPAIRING', s.repairAttempts + 1);
+          renderInspectorDrawer(idx);
+        } else {
+          updateStageCardUI(idx, 'RUNNING', 1);
+        }
+
+        document.getElementById('pipeline-progress').style.width =
+          `${((idx + 1) / stageDefinitions.length) * 100}%`;
+        return;
+      }
+
+      if (name === INSPECTOR_AGENT) {
+        const idx = stageFromText(request);
+        liveStage = idx;
+        selectStage(idx);
+
+        const s = stageState[idx];
+        updateStageCardUI(idx, 'INSPECTING', s.attempts || 1);
+        s.inspectorBadge = 'EVALUATING';
+        s.inspectorBadgeClass = 'px-2 py-0.5 rounded text-[10px] font-mono bg-brand-amber/20 text-brand-amber border border-brand-amber/40 animate-pulse';
+        s.inspectorStatusPill = 'Evaluating Phase...';
+        s.inspectorStatusPillClass = 'text-[10px] font-mono px-2 py-0.5 rounded bg-brand-amber/20 text-brand-amber';
+        renderInspectorDrawer(idx);
+      }
+    }
+
+    function handleLiveFunctionResponse(author, response) {
+      const name = response.name;
+      const result = liveResultText(response.response);
+      addLog(`[${escapeHTML(author)}]: ← ${escapeHTML(name)} ${escapeHTML(result)}`, 'inspector', liveStage);
+
+      if (name in TRADE_AGENT_TO_STAGE) {
+        const idx = TRADE_AGENT_TO_STAGE[name];
+        addThought(idx, `${liveRepairing ? '🛠️' : '🏗️'} [${name}]: ${result}`, liveRepairing ? 'repair' : 'thought');
+        return;
+      }
+
+      if (name === INSPECTOR_AGENT) {
+        const idx = stageFromText(result);
+        const s = stageState[idx];
+        const verdict = inspectorVerdict(result);
+
+        s.inspectorFindings = result;
+        s.inspectorBadge = verdict === 'FIX' ? 'FIX REQUIRED' : 'APPROVED';
+        s.inspectorBadgeClass = verdict === 'FIX'
+          ? 'px-2 py-0.5 rounded text-[10px] font-mono bg-brand-rose/20 text-brand-rose border border-brand-rose/40'
+          : 'px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-500/20 text-emerald-400 border border-emerald-500/40';
+        s.inspectorStatusPill = verdict === 'FIX' ? 'FAIL (FIX REQUIRED)' : 'PASS (APPROVED)';
+        s.inspectorStatusPillClass = verdict === 'FIX'
+          ? 'text-[10px] font-mono px-2 py-0.5 rounded bg-brand-rose/20 text-brand-rose font-bold'
+          : 'text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400';
+
+        updateStageCardUI(idx, verdict === 'FIX' ? 'FIX' : 'PASSED', s.attempts || 1);
+        renderInspectorDrawer(idx);
+        addThought(idx, `${verdict === 'FIX' ? '⛔' : '✅'} [inspector_agent]: ${result}`, verdict === 'FIX' ? 'fix' : 'inspection');
+      }
     }
 
     async function runPipeline() {
@@ -851,6 +987,8 @@
       if (mode === 'live_agent') {
         // LIVE ADK AGENT API MODE (SSE backend stream)
         try {
+          resetLiveRunState();
+          selectStage(0);
           addLog(`[router]: Connecting to Live ADK Backend Agent API at /api/run_sse...`, 'router');
 
           // Ensure valid ADK Session ID
