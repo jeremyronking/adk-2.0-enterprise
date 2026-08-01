@@ -8,6 +8,7 @@
 package ratelimit
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net"
 	"net/http"
@@ -31,7 +32,19 @@ type Config struct {
 	// restrictions so the origin cannot be reached directly — otherwise a caller
 	// can forge the header and mint unlimited quota buckets.
 	TrustCloudflare bool
+	// OriginSecret, when non-empty, requires metered requests to present it in
+	// the X-Origin-Auth header. A Cloudflare Transform Rule injects the value,
+	// so requests that skip Cloudflare and hit the origin URL directly are
+	// rejected. This is what makes TrustCloudflare safe: without it, anyone who
+	// finds the origin can forge CF-Connecting-IP and mint unlimited quota.
+	//
+	// Only metered paths are gated. The UI still loads from the bare origin —
+	// a misconfigured rule degrades the demo rather than taking the site down.
+	OriginSecret string
 }
+
+// OriginAuthHeader carries the shared secret injected by the edge proxy.
+const OriginAuthHeader = "X-Origin-Auth"
 
 type visitor struct {
 	burst    *rate.Limiter
@@ -135,6 +148,20 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !l.isExpensive(r.URL.Path) {
 			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Reject metered requests that did not come through the edge proxy.
+		// Checked before any quota accounting so a direct caller cannot even
+		// probe the counters.
+		if l.cfg.OriginSecret != "" &&
+			subtle.ConstantTimeCompare([]byte(r.Header.Get(OriginAuthHeader)), []byte(l.cfg.OriginSecret)) != 1 {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"error":   "DIRECT_ORIGIN_ACCESS",
+				"message": "Live runs must be requested through the public demo URL.",
+			})
 			return
 		}
 

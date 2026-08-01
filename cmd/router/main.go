@@ -119,6 +119,9 @@ func main() {
 		// Only when Cloudflare fronts every request AND the origin is not
 		// directly reachable; otherwise CF-Connecting-IP is forgeable.
 		TrustCloudflare: os.Getenv("TRUST_CLOUDFLARE") == "true",
+		// Injected by a Cloudflare Transform Rule; gates metered paths so the
+		// bare origin URL cannot be used to bypass the quota.
+		OriginSecret: os.Getenv("ORIGIN_SHARED_SECRET"),
 	})
 
 	mux := http.NewServeMux()

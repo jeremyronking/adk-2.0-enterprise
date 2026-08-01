@@ -91,6 +91,8 @@ Pick an **Execution Mode**:
 | `PORT` | `8080` | HTTP listen port. |
 | `DEMO_RUNS_PER_DAY` | `3` | Live runs allowed per client IP per day. |
 | `DEMO_RUNS_PER_MINUTE` | `2` | Burst limit per client IP. |
+| `TRUST_CLOUDFLARE` | `false` | Read the client IP from `CF-Connecting-IP`. Only with `ORIGIN_SHARED_SECRET`. |
+| `ORIGIN_SHARED_SECRET` | — | Secret injected by the edge proxy; metered endpoints reject requests without it. |
 
 ---
 
@@ -101,6 +103,16 @@ Live runs invoke Gemini and cost real money, so a public deployment meters them 
 Only the agent-invoking endpoints are metered. The UI, session bookkeeping, and app listing stay free, so the page still works once the quota is spent — it falls back to the simulated pipeline and says so. `GET /api/limits` reports the caller's remaining allowance.
 
 **The counter is in-process.** With more than one serving instance a visitor's effective allowance is multiplied by the instance count, so the router deploys with `--max-instances 1`. That is right for a demo and also hard-caps cost; a real deployment would move the counter to a shared store (Redis, Firestore) and drop the instance limit.
+
+### Identifying the client
+
+`X-Forwarded-For` is caller-supplied data that proxies *append* to, so the leftmost entry is attacker-controlled — trusting it lets anyone mint a fresh quota bucket per request by inventing a value. The resolver reads from the right instead, and never from the left.
+
+Behind Cloudflare the rightmost entry becomes Cloudflare's own egress IP, which would collapse every visitor into one bucket. `TRUST_CLOUDFLARE=true` switches to `CF-Connecting-IP`, which Cloudflare overwrites on every request.
+
+That header is only trustworthy if the origin cannot be reached directly, so it pairs with `ORIGIN_SHARED_SECRET`: a Cloudflare Transform Rule injects the value as `X-Origin-Auth`, and metered endpoints reject requests without it. Requests that skip the edge and hit the Cloud Run URL are refused before any quota accounting happens.
+
+Only metered paths are gated — the UI still loads from the bare origin, so a misconfigured rule degrades the demo instead of taking the site down.
 
 See [`internal/ratelimit/`](internal/ratelimit/).
 
