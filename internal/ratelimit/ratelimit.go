@@ -26,6 +26,11 @@ type Config struct {
 	RunsPerDay int
 	// Paths are the URL path prefixes treated as expensive (agent invocations).
 	Paths []string
+	// TrustCloudflare makes client IP resolution read CF-Connecting-IP. Enable
+	// it only when Cloudflare proxies every request, and pair it with ingress
+	// restrictions so the origin cannot be reached directly — otherwise a caller
+	// can forge the header and mint unlimited quota buckets.
+	TrustCloudflare bool
 }
 
 type visitor struct {
@@ -115,7 +120,7 @@ func (l *Limiter) Status(r *http.Request) Status {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	v := l.getVisitor(ClientIP(r))
+	v := l.getVisitor(ClientIP(r, l.cfg.TrustCloudflare))
 	remaining := l.cfg.RunsPerDay - v.dayCount
 	if remaining < 0 {
 		remaining = 0
@@ -134,7 +139,7 @@ func (l *Limiter) Middleware(next http.Handler) http.Handler {
 		}
 
 		l.mu.Lock()
-		v := l.getVisitor(ClientIP(r))
+		v := l.getVisitor(ClientIP(r, l.cfg.TrustCloudflare))
 
 		if l.cfg.RunsPerDay > 0 && v.dayCount >= l.cfg.RunsPerDay {
 			resetIn := int(time.Until(v.dayStart.Add(24 * time.Hour)).Seconds())
@@ -173,15 +178,37 @@ func (l *Limiter) StatusHandler(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(l.Status(r))
 }
 
-// ClientIP resolves the caller's address. Behind Cloud Run the direct peer is
-// the load balancer, so the leftmost X-Forwarded-For entry is the real client.
-func ClientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.IndexByte(xff, ','); i >= 0 {
-			return strings.TrimSpace(xff[:i])
+// ClientIP resolves the caller's address for quota accounting.
+//
+// X-Forwarded-For is client-supplied data that proxies APPEND to. Trusting the
+// leftmost entry lets any caller mint a fresh quota bucket by sending a made-up
+// value, so we always read from the right — the entries a proxy appended — and
+// never from the left.
+//
+// trustCloudflare selects which hop to believe:
+//
+//   - true:  CF-Connecting-IP, which Cloudflare overwrites on every request and
+//     a client therefore cannot forge. Only correct when Cloudflare is
+//     guaranteed to be in front; otherwise a direct caller could forge it.
+//   - false: the rightmost X-Forwarded-For entry, appended by Google's front end
+//     for a request that reached Cloud Run directly.
+func ClientIP(r *http.Request, trustCloudflare bool) string {
+	if trustCloudflare {
+		if ip := strings.TrimSpace(r.Header.Get("CF-Connecting-IP")); ip != "" {
+			return ip
 		}
-		return strings.TrimSpace(xff)
 	}
+
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.LastIndexByte(xff, ','); i >= 0 {
+			if ip := strings.TrimSpace(xff[i+1:]); ip != "" {
+				return ip
+			}
+		} else if ip := strings.TrimSpace(xff); ip != "" {
+			return ip
+		}
+	}
+
 	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		return host
 	}

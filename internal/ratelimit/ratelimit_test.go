@@ -148,16 +148,84 @@ func TestStatusDoesNotConsumeQuota(t *testing.T) {
 	}
 }
 
-func TestClientIPPrefersLeftmostForwardedFor(t *testing.T) {
+func TestClientIPReadsRightmostForwardedFor(t *testing.T) {
+	// Proxies append, so the rightmost entry is the one our trusted hop added.
+	// Everything to its left is caller-supplied and must not be believed.
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("X-Forwarded-For", "203.0.113.1, 70.41.3.18, 150.172.238.178")
-	if got := ClientIP(r); got != "203.0.113.1" {
-		t.Errorf("ClientIP = %q, want the original client 203.0.113.1", got)
+	if got := ClientIP(r, false); got != "150.172.238.178" {
+		t.Errorf("ClientIP = %q, want the proxy-appended 150.172.238.178", got)
 	}
 
 	r = httptest.NewRequest(http.MethodGet, "/", nil)
 	r.RemoteAddr = "192.0.2.44:51234"
-	if got := ClientIP(r); got != "192.0.2.44" {
+	if got := ClientIP(r, false); got != "192.0.2.44" {
 		t.Errorf("ClientIP fallback = %q, want 192.0.2.44", got)
+	}
+}
+
+// A caller must not be able to mint fresh quota buckets by inventing
+// X-Forwarded-For values. This is the bypass the leftmost-entry version had.
+func TestSpoofedForwardedForCannotResetQuota(t *testing.T) {
+	l := newTestLimiter(60, 2)
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// One real client (the proxy always appends 198.51.100.77) rotating
+	// through invented leftmost values on every request.
+	attempt := func(spoof string) int {
+		r := httptest.NewRequest(http.MethodPost, "/api/run_sse", nil)
+		r.Header.Set("X-Forwarded-For", spoof+", 198.51.100.77")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec.Code
+	}
+
+	if got := attempt("1.1.1.1"); got != http.StatusOK {
+		t.Fatalf("run 1: got %d, want 200", got)
+	}
+	if got := attempt("2.2.2.2"); got != http.StatusOK {
+		t.Fatalf("run 2: got %d, want 200", got)
+	}
+	if got := attempt("3.3.3.3"); got != http.StatusTooManyRequests {
+		t.Fatalf("run 3 with a new spoofed IP: got %d, want 429 — quota was bypassed", got)
+	}
+}
+
+func TestCloudflareConnectingIPPreferredWhenTrusted(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.Header.Set("CF-Connecting-IP", "203.0.113.50")
+	r.Header.Set("X-Forwarded-For", "1.1.1.1, 9.9.9.9")
+
+	if got := ClientIP(r, true); got != "203.0.113.50" {
+		t.Errorf("trusted: ClientIP = %q, want CF-Connecting-IP 203.0.113.50", got)
+	}
+	// Untrusted deployments must ignore the forgeable Cloudflare header.
+	if got := ClientIP(r, false); got != "9.9.9.9" {
+		t.Errorf("untrusted: ClientIP = %q, want rightmost XFF 9.9.9.9", got)
+	}
+}
+
+func TestSpoofedCloudflareHeaderIgnoredWhenNotTrusted(t *testing.T) {
+	l := newTestLimiter(60, 1)
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	attempt := func(spoof string) int {
+		r := httptest.NewRequest(http.MethodPost, "/api/run_sse", nil)
+		r.Header.Set("CF-Connecting-IP", spoof)
+		r.Header.Set("X-Forwarded-For", "203.0.113.90")
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, r)
+		return rec.Code
+	}
+
+	if got := attempt("8.8.8.8"); got != http.StatusOK {
+		t.Fatalf("first: got %d, want 200", got)
+	}
+	if got := attempt("4.4.4.4"); got != http.StatusTooManyRequests {
+		t.Fatalf("second with new forged CF header: got %d, want 429", got)
 	}
 }
