@@ -1,0 +1,94 @@
+// Package main runs the Master Router microservice for Enterprise Agent Platform.
+package main
+
+import (
+	"context"
+	"log"
+	"os"
+	"strings"
+
+	"google.golang.org/adk/v2/agent"
+	"google.golang.org/adk/v2/cmd/launcher"
+	"google.golang.org/adk/v2/cmd/launcher/full"
+	"google.golang.org/adk/v2/memory"
+	"google.golang.org/adk/v2/model/gemini"
+	"google.golang.org/adk/v2/session"
+	"google.golang.org/adk/v2/telemetry"
+	"google.golang.org/genai"
+
+	"my-agent-enterprise/agents/chatagent"
+)
+
+func getGCPProject() string {
+	if proj := os.Getenv("GCP_PROJECT_ID"); proj != "" {
+		return proj
+	}
+	return os.Getenv("GOOGLE_CLOUD_PROJECT")
+}
+
+func main() {
+	ctx := context.Background()
+
+	var clientCfg *genai.ClientConfig
+	if apiKey := os.Getenv("GOOGLE_API_KEY"); apiKey != "" {
+		clientCfg = &genai.ClientConfig{
+			APIKey: apiKey,
+		}
+	} else {
+		gcpProject := getGCPProject()
+		if gcpProject != "" {
+			clientCfg = &genai.ClientConfig{
+				Backend:  genai.BackendVertexAI,
+				Project:  gcpProject,
+				Location: "us-central1",
+			}
+		}
+	}
+
+	model, err := gemini.NewModel(ctx, "gemini-flash-latest", clientCfg)
+	if err != nil {
+		log.Fatalf("failed to create gemini model: %v", err)
+	}
+
+	rootAgent, err := chatagent.New(model)
+	if err != nil {
+		log.Fatalf("failed to create chat agent: %v", err)
+	}
+
+	sessService := session.InMemoryService()
+	memService := memory.InMemoryService()
+
+	config := &launcher.Config{
+		AgentLoader:    agent.NewSingleLoader(rootAgent),
+		SessionService: sessService,
+		MemoryService:  memService,
+		TelemetryOptions: []telemetry.Option{
+			telemetry.WithOtelToCloud(true),
+		},
+	}
+
+	args := os.Args[1:]
+	if len(args) == 0 {
+		args = []string{"web", "-port", "8080", "-api_server_address", "/api", "api", "webui"}
+	} else if len(args) >= 1 && args[0] == "web" {
+		hasAPIAddr := false
+		for i, arg := range args {
+			if arg == "-api_server_address" || strings.HasPrefix(arg, "-api_server_address=") {
+				hasAPIAddr = true
+				break
+			}
+			if i > 0 && args[i-1] == "-api_server_address" {
+				hasAPIAddr = true
+				break
+			}
+		}
+		if !hasAPIAddr {
+			args = append([]string{"web", "-api_server_address", "/api"}, args[1:]...)
+		}
+	}
+
+	l := full.NewLauncher()
+	if err = l.Execute(ctx, config, args); err != nil {
+		log.Fatalf("Run failed: %v\n\n%s", err, l.CommandLineSyntax())
+	}
+}
