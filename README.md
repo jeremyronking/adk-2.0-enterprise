@@ -4,6 +4,8 @@ A reference implementation of a multi-agent system built with the **[Google Agen
 
 The demo scenario is a construction workflow: an orchestrator drives five build phases, a building inspector agent audits each one, and failed inspections trigger a repair-and-re-inspect loop — all decided by the model at runtime, not scripted.
 
+**▶ Live demo: [adk.jking.ai](https://adk.jking.ai)** — pick *Live ADK Backend Agent API* and press Start. Live runs are capped at 3/day per visitor since each one calls Gemini; the simulated pipeline is unlimited.
+
 ![Command Center — a completed live run, showing the interior phase after two inspector-driven repair cycles](docs/command-center.jpg)
 
 *A real Gemini-backed run. The interior phase failed inspection twice; each failure dispatched a repair and a re-inspection before passing.*
