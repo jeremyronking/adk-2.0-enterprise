@@ -24,7 +24,7 @@ build:
 	go build -o bin/time ./cmd/time
 
 deploy-router:
-	gcloud builds submit --project=$(PROJECT_ID) --build-arg SERVICE=router --tag gcr.io/$(PROJECT_ID)/adk-enterprise-router:latest .
+	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=router,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-router:latest .
 	gcloud run deploy adk-enterprise-router \
 		--project=$(PROJECT_ID) \
 		--image gcr.io/$(PROJECT_ID)/adk-enterprise-router:latest \
@@ -35,7 +35,7 @@ deploy-router:
 		--port 8080
 
 deploy-construction:
-	gcloud builds submit --project=$(PROJECT_ID) --build-arg SERVICE=construction --tag gcr.io/$(PROJECT_ID)/adk-enterprise-construction:latest .
+	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=construction,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-construction:latest .
 	gcloud run deploy adk-enterprise-construction \
 		--project=$(PROJECT_ID) \
 		--image gcr.io/$(PROJECT_ID)/adk-enterprise-construction:latest \
@@ -46,7 +46,7 @@ deploy-construction:
 		--port 8080
 
 deploy-weather:
-	gcloud builds submit --project=$(PROJECT_ID) --build-arg SERVICE=weather --tag gcr.io/$(PROJECT_ID)/adk-enterprise-weather:latest .
+	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=weather,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-weather:latest .
 	gcloud run deploy adk-enterprise-weather \
 		--project=$(PROJECT_ID) \
 		--image gcr.io/$(PROJECT_ID)/adk-enterprise-weather:latest \
@@ -57,7 +57,7 @@ deploy-weather:
 		--port 8080
 
 deploy-time:
-	gcloud builds submit --project=$(PROJECT_ID) --build-arg SERVICE=time --tag gcr.io/$(PROJECT_ID)/adk-enterprise-time:latest .
+	gcloud builds submit --project=$(PROJECT_ID) --config=cloudbuild.yaml --substitutions=_SERVICE=time,_IMAGE=gcr.io/$(PROJECT_ID)/adk-enterprise-time:latest .
 	gcloud run deploy adk-enterprise-time \
 		--project=$(PROJECT_ID) \
 		--image gcr.io/$(PROJECT_ID)/adk-enterprise-time:latest \
