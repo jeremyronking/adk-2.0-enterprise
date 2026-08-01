@@ -1,5 +1,8 @@
 # Enterprise Agent Platform Makefile
-PROJECT_ID ?= jking-ai-labs
+#
+# PROJECT_ID defaults to your active gcloud project. Override per-invocation
+# with `make deploy-router PROJECT_ID=my-project`.
+PROJECT_ID ?= $(shell gcloud config get-value project 2>/dev/null)
 REGION ?= us-central1
 
 .PHONY: all check test build deploy-router deploy-construction deploy-weather deploy-time deploy-all

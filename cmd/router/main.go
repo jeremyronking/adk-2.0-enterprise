@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"google.golang.org/adk/v2/agent"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/genai"
 
 	"my-agent-enterprise/agents/chatagent"
+	"my-agent-enterprise/internal/ratelimit"
 )
 
 //go:embed web/index.html
@@ -106,7 +108,20 @@ func main() {
 	}
 	apiProxy.FlushInterval = 100 * time.Millisecond
 
+	// Agent runs invoke Gemini and cost real money, so the public demo meters
+	// them per visitor. Only the run endpoints are metered; the UI, session
+	// bookkeeping, and app listing stay free so the page works after the quota
+	// is spent (the simulated pipeline remains fully usable).
+	limiter := ratelimit.New(ratelimit.Config{
+		RunsPerMinute: envInt("DEMO_RUNS_PER_MINUTE", 2),
+		RunsPerDay:    envInt("DEMO_RUNS_PER_DAY", 3),
+		Paths:         []string{"/api/run"},
+	})
+
 	mux := http.NewServeMux()
+
+	// Remaining allowance, so the UI can show it before a run is attempted.
+	mux.HandleFunc("/api/limits", limiter.StatusHandler)
 
 	// Reverse proxy /api/ calls to ADK backend API server
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
@@ -120,7 +135,22 @@ func main() {
 	})
 
 	log.Printf("Enterprise Master Router listening on port %s (serving Production Command Center UI)", port)
-	if err := http.ListenAndServe(":"+port, mux); err != nil {
+	log.Printf("Demo quota: %d live runs/day, %d/min per client IP", envInt("DEMO_RUNS_PER_DAY", 3), envInt("DEMO_RUNS_PER_MINUTE", 2))
+	if err := http.ListenAndServe(":"+port, limiter.Middleware(mux)); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)
 	}
+}
+
+// envInt reads an integer env var, falling back to def when unset or invalid.
+func envInt(key string, def int) int {
+	v := os.Getenv(key)
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil {
+		log.Printf("invalid %s=%q, using default %d", key, v, def)
+		return def
+	}
+	return n
 }

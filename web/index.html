@@ -226,6 +226,9 @@
 
       <!-- Execution Controls -->
       <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+        <span id="quota-badge"
+          class="hidden text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap"
+          title="Live agent runs call Gemini and cost real money, so the public demo meters them per visitor. The simulated pipeline is unlimited."></span>
         <button id="btn-start" onclick="runPipeline()"
           class="px-5 py-2.5 rounded-lg bg-brand-cyan hover:bg-brand-cyan/90 text-black font-semibold text-xs flex items-center gap-2 whitespace-nowrap shrink-0 shadow-[0_0_15px_rgba(0,240,255,0.4)] transition">
           <span class="material-symbols-outlined text-sm">play_arrow</span> Start Construction
@@ -796,6 +799,27 @@
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
+    // Live runs invoke Gemini, so the deployment meters them per client IP.
+    // Surface the remaining allowance up front rather than letting a visitor
+    // discover the limit by hitting a 429.
+    async function refreshQuotaBadge() {
+      const badge = document.getElementById('quota-badge');
+      try {
+        const resp = await fetch('/api/limits');
+        if (!resp.ok) return;
+        const q = await resp.json();
+        if (!q || typeof q.remaining !== 'number') return;
+
+        badge.classList.remove('hidden');
+        badge.innerText = `${q.remaining}/${q.runsPerDay} live runs left today`;
+        badge.className = q.remaining > 0
+          ? 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-white/5 text-gray-400 border-white/10'
+          : 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-brand-amber/20 text-brand-amber border-brand-amber/40';
+      } catch (e) {
+        // Running without the router (e.g. the static docs copy) — stay hidden.
+      }
+    }
+
     function escapeHTML(str) {
       const div = document.createElement('div');
       div.textContent = str;
@@ -1030,11 +1054,29 @@
             body: JSON.stringify(runPayload)
           });
 
+          // The public demo meters live runs per client IP. Say so plainly and
+          // fall through to the simulated pipeline rather than failing silently.
+          if (resp.status === 429) {
+            let msg = 'Live run quota reached for today.';
+            try {
+              const body = await resp.json();
+              if (body && body.message) msg = body.message;
+            } catch (e) { /* non-JSON body; keep the default */ }
+
+            addLog(`[router]: ⏳ ${escapeHTML(msg)}`, 'fix');
+            await refreshQuotaBadge();
+            addLog(`[router]: Falling back to the simulated pipeline — unlimited and no API cost.`, 'router');
+            await runSimulationPipeline(structure, inspectorMode);
+            return;
+          }
+
           if (!resp.ok) {
             addLog(`[router]: Live API status ${resp.status}. Executing interactive visual agent orchestrator...`, 'fix');
             await runSimulationPipeline(structure, inspectorMode);
             return;
           }
+
+          refreshQuotaBadge();
 
           const reader = resp.body.getReader();
           const decoder = new TextDecoder();
@@ -1240,6 +1282,7 @@
     }
 
     selectStage(0);
+    refreshQuotaBadge();
   </script>
 </body>
 

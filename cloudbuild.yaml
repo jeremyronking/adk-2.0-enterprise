@@ -4,5 +4,7 @@ steps:
 images:
 - '${_IMAGE}'
 substitutions:
+  # Both are supplied by the Makefile deploy targets; these are fallbacks only.
+  # _IMAGE is fully qualified there as gcr.io/$(PROJECT_ID)/<service>:latest.
   _SERVICE: 'router'
-  _IMAGE: 'gcr.io/jking-ai-labs/adk-enterprise-router:latest'
+  _IMAGE: 'gcr.io/$PROJECT_ID/adk-enterprise-router:latest'

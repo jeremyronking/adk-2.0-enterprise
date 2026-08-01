@@ -6,21 +6,36 @@ This document describes the distributed multi-agent microservice architecture, c
 
 ## 1. System Overview
 
-The **Enterprise Agent Platform** is built using Google's **Agent Development Kit (ADK) 2.0** (`google.golang.org/adk/v2`) in Go. Unlike monolithic single-binary agent setups, the enterprise architecture splits orchestrators, domain services, and trade simulation agents into independent, containerized HTTP microservices deployed to GCP Cloud Run.
+The **Enterprise Agent Platform** is built using Google's **Agent Development Kit (ADK) 2.0** (`google.golang.org/adk/v2`) in Go. Agent packages are written so they can be composed two ways from the same source: embedded in a single process, or deployed as independent containerized services on Cloud Run.
+
+**The router uses in-process composition.** Sub-agents register themselves with [`internal/registry`](../internal/registry) via package `init()`, and `chat_agent` discovers them at startup. There is no network hop between the router and its sub-agents.
 
 ```
-                                    ┌─────────────────────────────┐
-                                    │    adk-enterprise-router    │
-                                    │  (Master Router & Web UI)   │
-                                    └──────────────┬──────────────┘
-                                                   │ A2A Protocol / REST
-                   ┌───────────────────────────────┼───────────────────────────────┐
-                   ▼                               ▼                               ▼
-    ┌─────────────────────────────┐ ┌─────────────────────────────┐ ┌─────────────────────────────┐
-    │ adk-enterprise-construction │ │    adk-enterprise-weather   │ │      adk-enterprise-time    │
-    │ (Construction Orchestrator) │ │       (Weather Agent)       │ │        (Time Agent)         │
-    └─────────────────────────────┘ └─────────────────────────────┘ └─────────────────────────────┘
+ Browser ──HTTP──▶ router (cmd/router)
+                    │
+                    ├── serves the Command Center UI (go:embed)
+                    ├── proxies /api/* ──▶ ADK REST server (in-process, port 8081)
+                    └── per-IP demo quota (internal/ratelimit)
+                                              │
+                                              ▼
+                                     chat_agent  (root router)
+                                              │  transfer_to_agent
+                                              ▼
+                                    construction_agent  (orchestrator)
+                                              │  agenttool calls
+              ┌───────────────┬───────────────┼───────────────┬───────────────┐
+              ▼               ▼               ▼               ▼               ▼
+      foundation_agent  framing_agent   roofing_agent  exterior_agent  interior_agent
+                                              │
+                                              ▼
+                                      inspector_agent  ──▶ PASS | FIX
 ```
+
+The `construction`, `weather`, and `time` binaries wrap the same agent packages as standalone ADK servers with their own Cloud Run targets. They are independently deployable, but the router does not currently call them over the network — it links the packages directly.
+
+### Event authorship
+
+Because sub-agents are invoked as `agenttool` calls rather than transferred to, they do **not** emit their own top-level events. Every event in a construction run is authored by `construction_agent`, appearing as `functionCall` / `functionResponse` pairs whose `name` is the sub-agent. Any consumer mapping events to UI state must key off the **tool name**, not the event author.
 
 ---
 
@@ -28,7 +43,7 @@ The **Enterprise Agent Platform** is built using Google's **Agent Development Ki
 
 | Service Name | Entry Point | Target Directory | Responsibility |
 | :--- | :--- | :--- | :--- |
-| **`adk-enterprise-router`** | [`cmd/router/main.go`](../cmd/router/main.go) | [`agents/chatagent`](../agents/chatagent) | Master router serving Angular Web UI, delegating requests across microservices. |
+| **`adk-enterprise-router`** | [`cmd/router/main.go`](../cmd/router/main.go) | [`agents/chatagent`](../agents/chatagent) | Serves the Command Center UI (a single `go:embed`-ed HTML page) and hosts the root `chat_agent` with all sub-agents composed in-process. |
 | **`adk-enterprise-construction`** | [`cmd/construction/main.go`](../cmd/construction/main.go) | [`agents/construction`](../agents/construction) | Construction simulation orchestrator managing specialized trade sub-agents (framing, electrical, plumbing, finishing). |
 | **`adk-enterprise-weather`** | [`cmd/weather/main.go`](../cmd/weather/main.go) | [`agents/weatheragent`](../agents/weatheragent) | Standalone weather forecast service powered by Open-Meteo geocoding and forecast APIs. |
 | **`adk-enterprise-time`** | [`cmd/time/main.go`](../cmd/time/main.go) | [`agents/timeagent`](../agents/timeagent) | Standalone date, time, and timezone resolution service with Go `tzdata`. |
