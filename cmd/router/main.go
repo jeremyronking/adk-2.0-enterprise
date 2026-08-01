@@ -116,6 +116,9 @@ func main() {
 		RunsPerMinute: envInt("DEMO_RUNS_PER_MINUTE", 2),
 		RunsPerDay:    envInt("DEMO_RUNS_PER_DAY", 3),
 		Paths:         []string{"/api/run"},
+		// Only when Cloudflare fronts every request AND the origin is not
+		// directly reachable; otherwise CF-Connecting-IP is forgeable.
+		TrustCloudflare: os.Getenv("TRUST_CLOUDFLARE") == "true",
 	})
 
 	mux := http.NewServeMux()
