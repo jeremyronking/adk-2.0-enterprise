@@ -815,7 +815,7 @@
             streaming: true
           };
 
-          const resp = await fetch('/api/run', {
+          const resp = await fetch('/api/run_sse', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(runPayload)

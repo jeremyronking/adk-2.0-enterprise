@@ -80,19 +80,31 @@ func main() {
 	// Internal port for background ADK launcher API server
 	internalAPIPort := "8081"
 
-	// Start ADK Launcher API server on internal port
+	// Start ADK Launcher API server on internal port with 10-minute timeouts for long agent runs
 	go func() {
 		l := full.NewLauncher()
-		apiArgs := []string{"web", "-port", internalAPIPort, "api"}
+		apiArgs := []string{
+			"web",
+			"-port", internalAPIPort,
+			"-write-timeout", "10m",
+			"-read-timeout", "10m",
+			"-idle-timeout", "10m",
+			"api",
+		}
 		if err := l.Execute(ctx, config, apiArgs); err != nil {
 			log.Printf("ADK Launcher API server exited: %v", err)
 		}
 	}()
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(500 * time.Millisecond)
 
 	apiTarget, _ := url.Parse(fmt.Sprintf("http://127.0.0.1:%s", internalAPIPort))
 	apiProxy := httputil.NewSingleHostReverseProxy(apiTarget)
+	apiProxy.Transport = &http.Transport{
+		ResponseHeaderTimeout: 10 * time.Minute,
+		IdleConnTimeout:       10 * time.Minute,
+	}
+	apiProxy.FlushInterval = 100 * time.Millisecond
 
 	mux := http.NewServeMux()
 
