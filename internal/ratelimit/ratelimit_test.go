@@ -1,8 +1,10 @@
 package ratelimit
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 )
@@ -190,6 +192,91 @@ func TestSpoofedForwardedForCannotResetQuota(t *testing.T) {
 	}
 	if got := attempt("3.3.3.3"); got != http.StatusTooManyRequests {
 		t.Fatalf("run 3 with a new spoofed IP: got %d, want 429 — quota was bypassed", got)
+	}
+}
+
+// The per-IP cap alone does not bound the bill: many distinct visitors can each
+// spend a full allowance. The global cap is what makes the daily cost finite.
+func TestGlobalCapStopsManyDistinctVisitors(t *testing.T) {
+	l := newTestLimiter(60, 3)
+	l.cfg.TotalRunsPerDay = 5
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Five different IPs, one run each — each is well within its own quota.
+	for i := 1; i <= 5; i++ {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, request("/api/run_sse", fmt.Sprintf("203.0.113.%d", i)))
+		if rec.Code != http.StatusOK {
+			t.Fatalf("visitor %d: got %d, want 200", i, rec.Code)
+		}
+	}
+
+	// A brand-new visitor with a full personal allowance must still be refused.
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, request("/api/run_sse", "203.0.113.99"))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("fresh visitor after global cap: got %d, want 429", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "DAILY_BUDGET_REACHED") {
+		t.Errorf("expected DAILY_BUDGET_REACHED, got %s", rec.Body.String())
+	}
+}
+
+func TestGlobalCapResetsAtUTCMidnight(t *testing.T) {
+	l := newTestLimiter(60, 3)
+	l.cfg.TotalRunsPerDay = 1
+	clock := time.Date(2026, 8, 1, 23, 59, 0, 0, time.UTC)
+	l.now = func() time.Time { return clock }
+	l.totalDay = dayBoundary(clock)
+
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	h.ServeHTTP(httptest.NewRecorder(), request("/api/run_sse", "198.51.100.5"))
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, request("/api/run_sse", "198.51.100.6"))
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("global cap same day: got %d, want 429", rec.Code)
+	}
+
+	clock = clock.Add(2 * time.Minute) // cross UTC midnight
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, request("/api/run_sse", "198.51.100.7"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("after UTC rollover: got %d, want 200", rec.Code)
+	}
+}
+
+func TestRejectedRequestsDoNotConsumeGlobalBudget(t *testing.T) {
+	l := newTestLimiter(60, 1)
+	l.cfg.TotalRunsPerDay = 10
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// One visitor burns their personal quota, then keeps hammering.
+	h.ServeHTTP(httptest.NewRecorder(), request("/api/run_sse", "203.0.113.40"))
+	for i := 0; i < 8; i++ {
+		h.ServeHTTP(httptest.NewRecorder(), request("/api/run_sse", "203.0.113.40"))
+	}
+
+	// Their rejected attempts must not have drained the shared budget.
+	st := l.Status(request("/api/limits", "203.0.113.41"))
+	if st.SharedRemaining != 9 {
+		t.Errorf("SharedRemaining = %d, want 9 (only the one allowed run counted)", st.SharedRemaining)
+	}
+}
+
+func TestStatusReportsSharedBudget(t *testing.T) {
+	l := newTestLimiter(60, 3)
+	l.cfg.TotalRunsPerDay = 10
+	st := l.Status(request("/api/limits", "203.0.113.50"))
+	if st.SharedPerDay != 10 || st.SharedRemaining != 10 {
+		t.Errorf("got SharedPerDay=%d SharedRemaining=%d, want 10/10", st.SharedPerDay, st.SharedRemaining)
 	}
 }
 

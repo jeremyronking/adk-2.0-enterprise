@@ -115,7 +115,10 @@ func main() {
 	limiter := ratelimit.New(ratelimit.Config{
 		RunsPerMinute: envInt("DEMO_RUNS_PER_MINUTE", 2),
 		RunsPerDay:    envInt("DEMO_RUNS_PER_DAY", 3),
-		Paths:         []string{"/api/run"},
+		// The per-IP cap bounds one visitor; only this bounds the bill when
+		// many distinct visitors each use their full allowance.
+		TotalRunsPerDay: envInt("DEMO_TOTAL_RUNS_PER_DAY", 10),
+		Paths:           []string{"/api/run"},
 		// Only when Cloudflare fronts every request AND the origin is not
 		// directly reachable; otherwise CF-Connecting-IP is forgeable.
 		TrustCloudflare: os.Getenv("TRUST_CLOUDFLARE") == "true",
@@ -141,7 +144,8 @@ func main() {
 	})
 
 	log.Printf("Enterprise Master Router listening on port %s (serving Production Command Center UI)", port)
-	log.Printf("Demo quota: %d live runs/day, %d/min per client IP", envInt("DEMO_RUNS_PER_DAY", 3), envInt("DEMO_RUNS_PER_MINUTE", 2))
+	log.Printf("Demo quota: %d live runs/day, %d/min per client IP; %d/day across all visitors",
+		envInt("DEMO_RUNS_PER_DAY", 3), envInt("DEMO_RUNS_PER_MINUTE", 2), envInt("DEMO_TOTAL_RUNS_PER_DAY", 10))
 	if err := http.ListenAndServe(":"+port, limiter.Middleware(mux)); err != nil {
 		log.Fatalf("HTTP server failed: %v", err)
 	}

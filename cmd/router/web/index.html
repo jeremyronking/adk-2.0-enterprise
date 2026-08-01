@@ -810,11 +810,25 @@
         const q = await resp.json();
         if (!q || typeof q.remaining !== 'number') return;
 
+        // Two independent limits: this visitor's allowance, and a shared daily
+        // budget across everyone. Whichever runs out first is what blocks a run,
+        // so show the binding one.
+        const sharedOut = typeof q.sharedRemaining === 'number'
+          && q.sharedPerDay > 0 && q.sharedRemaining <= 0;
+        const exhausted = sharedOut || q.remaining <= 0;
+
         badge.classList.remove('hidden');
-        badge.innerText = `${q.remaining}/${q.runsPerDay} live runs left today`;
-        badge.className = q.remaining > 0
-          ? 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-white/5 text-gray-400 border-white/10'
-          : 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-brand-amber/20 text-brand-amber border-brand-amber/40';
+        badge.innerText = sharedOut
+          ? 'shared daily budget spent'
+          : `${q.remaining}/${q.runsPerDay} live runs left today`;
+        badge.title = q.sharedPerDay > 0
+          ? `You have ${q.remaining} of ${q.runsPerDay} runs today. `
+            + `${q.sharedRemaining} of ${q.sharedPerDay} remain in the shared daily budget across all visitors. `
+            + `Live runs call Gemini and cost real money; the simulated pipeline is unlimited.`
+          : badge.title;
+        badge.className = exhausted
+          ? 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-brand-amber/20 text-brand-amber border-brand-amber/40'
+          : 'text-[10px] font-mono px-2.5 py-1 rounded-full border whitespace-nowrap bg-white/5 text-gray-400 border-white/10';
       } catch (e) {
         // Running without the router (e.g. the static docs copy) — stay hidden.
       }
