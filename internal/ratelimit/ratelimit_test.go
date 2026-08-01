@@ -193,6 +193,77 @@ func TestSpoofedForwardedForCannotResetQuota(t *testing.T) {
 	}
 }
 
+func TestOriginSecretGatesMeteredPaths(t *testing.T) {
+	l := newTestLimiter(60, 5)
+	l.cfg.OriginSecret = "s3cr3t"
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// No header at all — a direct hit on the origin URL.
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, request("/api/run_sse", "203.0.113.30"))
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("missing secret: got %d, want 403", rec.Code)
+	}
+
+	// Wrong value.
+	r := request("/api/run_sse", "203.0.113.30")
+	r.Header.Set(OriginAuthHeader, "guess")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	if rec.Code != http.StatusForbidden {
+		t.Errorf("wrong secret: got %d, want 403", rec.Code)
+	}
+
+	// Correct value, as injected by the edge.
+	r = request("/api/run_sse", "203.0.113.30")
+	r.Header.Set(OriginAuthHeader, "s3cr3t")
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	if rec.Code != http.StatusOK {
+		t.Errorf("correct secret: got %d, want 200", rec.Code)
+	}
+}
+
+func TestOriginSecretRejectionDoesNotConsumeQuota(t *testing.T) {
+	l := newTestLimiter(60, 1)
+	l.cfg.OriginSecret = "s3cr3t"
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// Hammer the origin directly; none of it should touch the counters.
+	for i := 0; i < 10; i++ {
+		h.ServeHTTP(httptest.NewRecorder(), request("/api/run_sse", "203.0.113.31"))
+	}
+
+	r := request("/api/run_sse", "203.0.113.31")
+	r.Header.Set(OriginAuthHeader, "s3cr3t")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("legitimate request after rejected ones: got %d, want 200", rec.Code)
+	}
+}
+
+func TestUIStillLoadsFromBareOrigin(t *testing.T) {
+	l := newTestLimiter(60, 3)
+	l.cfg.OriginSecret = "s3cr3t"
+	h := l.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	// A broken Transform Rule should degrade the demo, not take the site down.
+	for _, path := range []string{"/", "/api/limits", "/api/list-apps"} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, request(path, "203.0.113.32"))
+		if rec.Code != http.StatusOK {
+			t.Errorf("%s: got %d, want 200 (must not require the origin secret)", path, rec.Code)
+		}
+	}
+}
+
 func TestCloudflareConnectingIPPreferredWhenTrusted(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	r.Header.Set("CF-Connecting-IP", "203.0.113.50")
