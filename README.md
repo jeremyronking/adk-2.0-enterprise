@@ -1,12 +1,32 @@
-# ADK 2.0 Enterprise Agent Platform Reference
+<p align="center">
+  <img src="./assets/readme/hero.svg" width="100%"
+       alt="Enterprise Agent Platform — a crew of LLM agents builds a structure in five phases while an inspector agent rejects bad work and forces repairs. Built in Go on Google ADK 2.0.">
+</p>
+
+<p align="center">
+  <a href="https://adk.jking.ai"><strong>▶ Try the live demo</strong></a>
+  &nbsp;·&nbsp;
+  <a href="#quick-start">Quick start</a>
+  &nbsp;·&nbsp;
+  <a href="#architecture">Architecture</a>
+  &nbsp;·&nbsp;
+  <a href="#streaming-model">Streaming model</a>
+</p>
+
+<p align="center">
+  <img alt="Go 1.26" src="https://img.shields.io/badge/go-1.26-00ADD8?style=flat-square&logo=go&logoColor=white">
+  <img alt="Google ADK v2" src="https://img.shields.io/badge/google%20adk-v2.1.0-00f0ff?style=flat-square">
+  <img alt="Deployed on Cloud Run" src="https://img.shields.io/badge/cloud%20run-deployed-4285F4?style=flat-square&logo=googlecloud&logoColor=white">
+</p>
 
 A reference implementation of a multi-agent system built with the **[Google Agent Development Kit (ADK) 2.0](https://google.github.io/adk-docs/) for Go**, with a live operations UI that visualises agent execution as it happens.
 
 The demo scenario is a construction workflow: an orchestrator drives five build phases, a building inspector agent audits each one, and failed inspections trigger a repair-and-re-inspect loop — all decided by the model at runtime, not scripted.
 
-**▶ Live demo: [adk.jking.ai](https://adk.jking.ai)** — pick *Live ADK Backend Agent API* and press Start. Live runs are capped at 3/day per visitor since each one calls Gemini; the simulated pipeline is unlimited.
+> **▶ [adk.jking.ai](https://adk.jking.ai)** — pick *Live ADK Backend Agent API* and press Start.
+> Live runs are capped at 3/day per visitor because each one calls Gemini. The simulated pipeline is unlimited.
 
-![Command Center — a completed live run, showing the interior phase after two inspector-driven repair cycles](docs/command-center.jpg)
+![Command Center — a completed live run, showing the interior phase after two inspector-driven repair cycles](./assets/readme/command-center.jpg)
 
 *A real Gemini-backed run. The interior phase failed inspection twice; each failure dispatched a repair and a re-inspection before passing.*
 
@@ -25,26 +45,10 @@ The demo scenario is a construction workflow: an orchestrator drives five build 
 
 The router process composes every agent **in-process** through a local registry. `chat_agent` is the root router; sub-agents register themselves via package `init()` and are discovered at startup.
 
-```
- Browser ──HTTP──▶ router (cmd/router)
-                    │
-                    ├── serves the Command Center UI (embedded HTML)
-                    ├── proxies /api/* ──▶ ADK REST server (in-process, port 8081)
-                    └── meters live runs per client IP
-                                              │
-                                              ▼
-                                     chat_agent  (root router)
-                                              │  transfer_to_agent
-                                              ▼
-                                    construction_agent  (orchestrator)
-                                              │  agenttool calls
-              ┌───────────────┬───────────────┼───────────────┬───────────────┐
-              ▼               ▼               ▼               ▼               ▼
-      foundation_agent  framing_agent   roofing_agent  exterior_agent  interior_agent
-                                              │
-                                              ▼
-                                      inspector_agent  ──▶ PASS | FIX
-```
+<p align="center">
+  <img src="./assets/readme/workflow.svg" width="100%"
+       alt="A browser calls the router over SSE. The router serves the UI, proxies the ADK REST API, and meters runs per IP. The root chat_agent transfers to construction_agent, which invokes foundation, framing, roofing, exterior and interior agents plus an inspector agent as agenttool calls. The inspector returns PASS to advance, or FIX to repair and re-inspect.">
+</p>
 
 Because sub-agents are invoked as `agenttool` calls, they do **not** emit their own top-level events. Every event on the wire is authored by `construction_agent`; the active phase is identified by the *tool name*, not the event author. The UI relies on this when mapping events to stage cards.
 
