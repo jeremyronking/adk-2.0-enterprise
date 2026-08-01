@@ -3,6 +3,7 @@ module my-agent-enterprise
 go 1.26.5
 
 require (
+	golang.org/x/time v0.15.0
 	google.golang.org/adk/v2 v2.1.0
 	google.golang.org/genai v1.63.0
 )
